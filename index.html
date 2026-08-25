@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC Tivi</title>
+    <title>Kho Phim NguonC Tivi v2</title>
+    <!-- Thư viện phát video HLS cho stream m3u8 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,9 +82,10 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC</h1>
+    <h1>Kho Phim NguonC v2</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
+    <!-- Màn hình phát video -->
     <div id="player-container">
         <video id="video-player" controls autoplay></video>
         <button class="close-btn" onclick="closePlayer()">Đóng (Quay lại)</button>
@@ -121,12 +123,12 @@
                 document.querySelector('.movie-card')?.focus();
 
             } catch (error) {
-                console.error('Lỗi tải API:', error);
-                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới API phim.';
+                console.error('Lỗi tải danh sách:', error);
+                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới danh sách phim.';
             }
         }
 
-        // Hàm đệ quy thông minh quét toàn bộ object JSON để tìm link video (.m3u8 hoặc .mp4)
+        // Hàm đệ quy tự động quét toàn bộ object JSON để tìm link video (.m3u8 hoặc .mp4)
         function findVideoLink(obj) {
             if (!obj || typeof obj !== 'object') return null;
             for (let key in obj) {
@@ -143,16 +145,20 @@
 
         async function getMovieDetails(slug) {
             try {
-                let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
-                let data = await res.json();
+                // Dùng Proxy trung gian để ép vượt qua lỗi chặn CORS của trình duyệt/tivi
+                let proxyUrl = 'https://api.allorigins.win/get?url=';
+                let targetUrl = encodeURIComponent(`https://phim.nguonc.com/api/film/${slug}`);
+                
+                let res = await fetch(proxyUrl + targetUrl);
+                let wrapper = await res.json();
+                let data = JSON.parse(wrapper.contents);
                 
                 console.log("Dữ liệu chi tiết phim:", data);
 
-                // Dùng hàm quét tự động xem cấu trúc giấu link ở đâu
                 let playUrl = findVideoLink(data);
 
                 if (playUrl) {
-                    console.log("Đã tìm thấy link phát:", playUrl);
+                    console.log("Đã tìm thấy link stream:", playUrl);
                     playVideo(playUrl);
                 } else {
                     alert('Phim này không tìm thấy link stream hợp lệ!');
@@ -170,13 +176,15 @@
 
             if (url.includes('.m3u8')) {
                 if (Hls.isSupported()) {
-                    if (window.hlsInstance) window.hlsInstance.destroy();
+                    if (window.hlsInstance) {
+                        window.hlsInstance.destroy();
+                    }
                     const hls = new Hls();
                     window.hlsInstance = hls;
                     hls.loadSource(url);
                     hls.attachMedia(video);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        video.play().catch(e => console.log("Cần bấm play"));
+                        video.play().catch(e => console.log("Cần bấm play thủ công:", e));
                     });
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = url;
@@ -184,7 +192,7 @@
                 }
             } else {
                 video.src = url;
-                video.play().catch(e => console.log("Cần bấm play"));
+                video.play().catch(e => console.log("Cần bấm play thủ công:", e));
             }
         }
 
@@ -193,7 +201,9 @@
             const video = document.getElementById('video-player');
             video.pause();
             video.src = '';
-            if (window.hlsInstance) window.hlsInstance.destroy();
+            if (window.hlsInstance) {
+                window.hlsInstance.destroy();
+            }
             container.style.display = 'none';
         }
 
