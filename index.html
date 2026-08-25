@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC v4.1</title>
+    <title>Kho Phim NguonC v4.2</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,7 +81,7 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v4.1</h1>
+    <h1>Kho Phim NguonC v4.2</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
     <div id="player-container">
@@ -127,40 +127,28 @@
             }
         }
 
-        // Hàm quét sâu bất chấp cấu trúc JSON thay đổi
-        function deepFindLink(obj) {
-            if (!obj || typeof obj !== 'object') return null;
-            for (let key in obj) {
-                if (key === 'link' && typeof obj[key] === 'string' && (obj[key].includes('http') || obj[key].includes('.m3u8'))) {
-                    return obj[key];
-                }
-                if (typeof obj[key] === 'object') {
-                    let found = deepFindLink(obj[key]);
-                    if (found) return found;
-                }
-            }
-            return null;
-        }
-
         async function getMovieDetails(slug) {
             try {
                 let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
                 let data = await res.json();
                 
-                console.log("Dữ liệu chi tiết:", data);
+                // Trỏ thẳng vào đúng cấu trúc `data.movie.episodes` chuẩn xác 100%
+                let episodes = data.movie?.episodes || data.item?.episodes;
 
-                // Thử quét tự động bằng hàm quét sâu toàn cục
-                let playUrl = deepFindLink(data);
-
-                if (playUrl) {
-                    playVideo(playUrl);
-                } else {
-                    // Nếu vẫn không tìm thấy, thông báo chi tiết để debug
-                    alert('Không tìm thấy link trong phim này. Cấu trúc JSON: ' + JSON.stringify(data).slice(0, 100));
+                if (episodes && episodes.length > 0) {
+                    let firstServerItems = episodes[0].items;
+                    if (firstServerItems && firstServerItems.length > 0) {
+                        let playUrl = firstServerItems[0].link;
+                        if (playUrl) {
+                            playVideo(playUrl);
+                            return;
+                        }
+                    }
                 }
+                alert('Phim này chưa có link phát video!');
             } catch (error) {
                 console.error(error);
-                alert('Lỗi kết nối khi lấy chi tiết phim!');
+                alert('Không thể lấy chi tiết phim này do lỗi mạng hoặc CORS!');
             }
         }
 
