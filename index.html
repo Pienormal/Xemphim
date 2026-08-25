@@ -295,8 +295,7 @@
     </div>
 
     <script>
-        const API_GENRES_LIST = 'https://phimapi.com/v1/api/the-loai';
-        let currentFilterType = 'the-loai'; // Mặc định mở lên là thể loại hành động cho xôm
+        let currentFilterType = 'the-loai'; 
         let currentFilterSlug = 'hanh-dong';
         let currentPage = 1;
         let totalPages = 1;
@@ -377,9 +376,10 @@
         }
 
         // --- KHỞI TẠO BỘ LỌC ---
-        async function initApp() {
+        function initApp() {
             renderHistorySection();
 
+            // Danh sách Quốc gia
             let countries = [
                 { name: 'Hàn Quốc', slug: 'han-quoc' },
                 { name: 'Trung Quốc', slug: 'trung-quoc' },
@@ -398,47 +398,59 @@
                     currentFilterType = 'quoc-gia';
                     currentFilterSlug = c.slug;
                     currentPage = 1;
-                    setActiveChipUI();
+                    updateActiveChips();
                     fetchFilteredMovies();
                 };
                 countryContainer.appendChild(chip);
             });
 
-            try {
-                let res = await fetch(API_GENRES_LIST);
-                let json = await res.json();
-                let genres = Array.isArray(json) ? json : (json.data || json.items || []);
-                
-                let genreContainer = document.getElementById('genre-filters');
-                genreContainer.innerHTML = '';
+            // Danh sách Thể loại chuẩn
+            let genres = [
+                { name: 'Hành Động', slug: 'hanh-dong' },
+                { name: 'Tình Cảm', slug: 'tinh-cam' },
+                { name: 'Hài Hước', slug: 'hai-huoc' },
+                { name: 'Kinh Dị', slug: 'kinh-di' },
+                { name: 'Viễn Tưởng', slug: 'vien-tuong' },
+                { name: 'Hoạt Hình', slug: 'hoat-hinh' },
+                { name: 'Võ Thuật', slug: 'vo-thuat' },
+                { name: 'Tâm Lý', slug: 'tam-ly' }
+            ];
 
-                genres.forEach(g => {
-                    let chip = document.createElement('div');
-                    chip.className = `chip ${currentFilterType === 'the-loai' && currentFilterSlug === g.slug ? 'active' : ''}`;
-                    chip.innerText = g.name;
-                    chip.onclick = () => {
-                        currentFilterType = 'the-loai';
-                        currentFilterSlug = g.slug;
-                        currentPage = 1;
-                        setActiveChipUI();
-                        fetchFilteredMovies();
-                    };
-                    genreContainer.appendChild(chip);
-                });
-            } catch(e) { console.error("Lỗi tải danh sách thể loại:", e); }
+            let genreContainer = document.getElementById('genre-filters');
+            genreContainer.innerHTML = '';
+            genres.forEach(g => {
+                let chip = document.createElement('div');
+                chip.className = `chip ${currentFilterType === 'the-loai' && currentFilterSlug === g.slug ? 'active' : ''}`;
+                chip.innerText = g.name;
+                chip.onclick = () => {
+                    currentFilterType = 'the-loai';
+                    currentFilterSlug = g.slug;
+                    currentPage = 1;
+                    updateActiveChips();
+                    fetchFilteredMovies();
+                };
+                genreContainer.appendChild(chip);
+            });
 
-            setActiveChipUI();
             fetchFilteredMovies();
         }
 
-        function setActiveChipUI() {
+        function updateActiveChips() {
             document.querySelectorAll('.chip').forEach(chip => {
                 chip.classList.remove('active');
+                if (chip.innerText.toLowerCase() === getSlugName(currentFilterSlug).toLowerCase()) {
+                    // Active tương đối theo tên hiển thị
+                }
             });
-            // Tìm và active chip hiện tại dựa theo type và slug
-            document.querySelectorAll('.chip').forEach(chip => {
-                // Ta có thể check text hoặc đơn giản để sự kiện click tự đổi màu trực tiếp
-            });
+        }
+
+        function getSlugName(slug) {
+            const map = {
+                'han-quoc': 'Hàn Quốc', 'trung-quoc': 'Trung Quốc', 'au-my': 'Mỹ', 'nhat-ban': 'Nhật Bản', 'thai-lan': 'Thái Lan',
+                'hanh-dong': 'Hành Động', 'tinh-cam': 'Tình Cảm', 'hai-huoc': 'Hài Hước', 'kinh-di': 'Kinh Dị', 
+                'vien-tuong': 'Viễn Tưởng', 'hoat-hinh': 'Hoạt Hình', 'vo-thuat': 'Võ Thuật', 'tam-ly': 'Tâm Lý'
+            };
+            return map[slug] || '';
         }
 
         async function fetchFilteredMovies() {
@@ -446,14 +458,13 @@
             document.getElementById('results-title').innerText = "Danh sách phim";
             row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tải...</div>';
             
-            // Chuẩn hóa theo API fetch mà cậu cung cấp
+            // Gọi đúng endpoint API thể loại/quốc gia theo đúng yêu cầu
             let url = `https://phimapi.com/v1/api/${currentFilterType}/${currentFilterSlug}?page=${currentPage}`;
 
             try {
                 let res = await fetch(url);
                 let json = await res.json();
                 
-                // Lấy danh sách items linh hoạt theo cấu trúc trả về của API phimapi
                 let items = json.data?.items || json.items || json.data || [];
                 if (!Array.isArray(items)) items = [];
                 
@@ -484,6 +495,7 @@
             paginationContainer.style.display = 'flex';
             document.getElementById('page-info').innerText = `Trang ${currentPage} / ${totalPages}`;
             document.getElementById('prev-btn').disabled = (currentPage <= 1);
+            document.getElementById('next-btn').disabled = (currentPage >= totalPages);
         }
 
         function changePage(direction) {
