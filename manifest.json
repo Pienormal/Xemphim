@@ -1,0 +1,20 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "pienormal.github",
+  "orientation": "landscape-primary",
+  "scope": "/",
+  "short_name": "pienormal.github",
+  "start_url": "https://pienormal.github.io/Xemphim/",
+  "theme_color": "#ffffff",
+  "id": "localonly",
+  "description": "WebTV",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ],
+  "categories": [
+    "video"
+  ]
+}
