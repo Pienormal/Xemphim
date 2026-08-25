@@ -39,7 +39,7 @@
         }
         .search-box input {
             width: 100%;
-            padding: 12px 20px 12px 45px;
+            padding: 12px 20px; /* Bỏ padding trái cho icon kính lúp */
             background-color: #1a1a1a;
             border: 1px solid #333;
             border-radius: 30px;
@@ -48,17 +48,12 @@
             outline: none;
             box-sizing: border-box;
             transition: border-color 0.2s;
+            text-align: center;
         }
         .search-box input:focus {
             border-color: var(--accent-color);
-        }
-        .search-icon {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 16px;
+            text-align: left;
+            padding-left: 20px;
         }
 
         /* Views Container */
@@ -70,7 +65,7 @@
             display: block;
         }
 
-        /* Rows & Horizontal Scroll */
+        /* Rows & Horizontal Scroll (Giới hạn hiển thị để vừa khít 8 phim) */
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -87,10 +82,10 @@
             gap: 12px;
             overflow-x: auto;
             padding-bottom: 10px;
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
         }
         .movie-row::-webkit-scrollbar {
-            display: none; /* Chrome/Safari */
+            display: none;
         }
 
         /* Movie Card */
@@ -142,6 +137,39 @@
             height: 190px;
         }
 
+        /* Pagination Style */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 25px 0 15px 0;
+        }
+        .pagination-btn {
+            padding: 8px 18px;
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .pagination-btn:hover {
+            background-color: var(--accent-hover);
+        }
+        .pagination-btn:disabled {
+            background-color: #222;
+            color: #555;
+            cursor: not-allowed;
+        }
+        .page-indicator {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
         /* Filter Chips */
         .filter-container {
             display: flex;
@@ -168,7 +196,7 @@
             border-color: var(--accent-color);
         }
 
-        /* Bottom Navigation Bar */
+        /* Bottom Navigation Bar (Chỉ còn 2 nút gọn gàng) */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -234,10 +262,9 @@
 </head>
 <body>
 
-    <!-- Header Search Bar -->
+    <!-- Header Search Bar (Bỏ icon kính lúp) -->
     <div class="header-container">
         <div class="search-box">
-            <span class="search-icon">🔍</span>
             <input type="text" id="search-input" placeholder="You can search anything..." onkeypress="handleSearchKey(event)">
         </div>
     </div>
@@ -249,7 +276,7 @@
         </div>
     </div>
 
-    <!-- TAB 2: DISCOVER (Quốc gia & Thể loại) -->
+    <!-- TAB 2: DISCOVER (Quốc gia & Thể loại + Phân trang) -->
     <div id="view-discover" class="view-section">
         <div class="section-title" style="margin-bottom: 8px;">Quốc gia</div>
         <div id="country-filters" class="filter-container"></div>
@@ -258,6 +285,13 @@
         <div id="genre-filters" class="filter-container"></div>
 
         <div id="discover-grid" class="movie-grid"></div>
+
+        <!-- Nút phân trang cho phần Khám phá -->
+        <div class="pagination-container">
+            <button class="pagination-btn" id="prev-page-btn" onclick="changeDiscoverPage(-1)">Trang trước</button>
+            <span class="page-indicator" id="page-indicator">Trang 1</span>
+            <button class="pagination-btn" id="next-page-btn" onclick="changeDiscoverPage(1)">Trang sau</button>
+        </div>
     </div>
 
     <!-- TAB 3: SEARCH RESULTS VIEW -->
@@ -266,14 +300,7 @@
         <div id="search-grid" class="movie-grid"></div>
     </div>
 
-    <!-- TAB 4: SETTINGS -->
-    <div id="view-settings" class="view-section">
-        <div class="section-title">Cài đặt hệ thống</div>
-        <p style="color: var(--text-muted); font-size: 14px;">Stremio Web v1.0 - Clean & Fast</p>
-        <p style="color: var(--text-muted); font-size: 14px;">Nguồn dữ liệu: KKPhim API v1</p>
-    </div>
-
-    <!-- Bottom Navigation Bar -->
+    <!-- Bottom Navigation Bar (Đã bỏ Setting) -->
     <div class="bottom-nav">
         <button class="nav-item active" onclick="switchTab('home', this)">
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -282,10 +309,6 @@
         <button class="nav-item" onclick="switchTab('discover', this)">
             <svg viewBox="0 0 24 24"><path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/></svg>
             Discover
-        </button>
-        <button class="nav-item" onclick="switchTab('settings', this)">
-            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-            Settings
         </button>
     </div>
 
@@ -301,6 +324,7 @@
         
         let selectedCountry = 'han-quoc';
         let selectedGenre = '';
+        let currentDiscoverPage = 1;
 
         // Chuyển tab giao diện
         function switchTab(tabName, btnElement) {
@@ -312,8 +336,6 @@
             } else if (tabName === 'discover') {
                 document.getElementById('view-discover').classList.add('active');
                 loadDiscoverData();
-            } else if (tabName === 'settings') {
-                document.getElementById('view-settings').classList.add('active');
             }
             if (btnElement) btnElement.classList.add('active');
         }
@@ -341,7 +363,7 @@
             return card;
         }
 
-        // 1. Load Trang Chủ
+        // 1. Load Trang Chủ (Giới hạn mỗi hàng tối đa 8 phim)
         async function fetchHome() {
             try {
                 let res = await fetch(API_HOME, { headers: { accept: 'application/json' } });
@@ -372,16 +394,17 @@
             let row = document.createElement('div');
             row.className = 'movie-row';
 
-            movieList.forEach(movie => {
+            // Cắt danh sách chỉ lấy tối đa 8 phim cho mỗi hàng
+            let limitedList = movieList.slice(0, 8);
+            limitedList.forEach(movie => {
                 row.appendChild(createMovieCard(movie));
             });
 
             container.appendChild(row);
         }
 
-        // 2. Load Discover (Quốc gia & Thể loại)
+        // 2. Load Discover (Quốc gia & Thể loại có phân trang)
         async function loadDiscoverData() {
-            // Render danh sách quốc gia cố định phổ biến
             let countries = [
                 { name: 'Hàn Quốc', slug: 'han-quoc' },
                 { name: 'Trung Quốc', slug: 'trung-quoc' },
@@ -398,23 +421,26 @@
                 chip.innerText = c.name;
                 chip.onclick = () => {
                     selectedCountry = c.slug;
+                    currentDiscoverPage = 1; // Reset về trang 1 khi đổi quốc gia
                     loadDiscoverData();
                 };
                 countryContainer.appendChild(chip);
             });
 
-            // Lấy thể loại từ API
             try {
                 let res = await fetch(API_GENRES);
                 let genres = await res.json();
                 let genreContainer = document.getElementById('genre-filters');
                 genreContainer.innerHTML = '';
                 
-                // Nút tất cả thể loại
                 let allChip = document.createElement('div');
                 allChip.className = `chip ${!selectedGenre ? 'active' : ''}`;
                 allChip.innerText = 'Tất cả';
-                allChip.onclick = () => { selectedGenre = ''; loadDiscoverData(); };
+                allChip.onclick = () => { 
+                    selectedGenre = ''; 
+                    currentDiscoverPage = 1;
+                    loadDiscoverData(); 
+                };
                 genreContainer.appendChild(allChip);
 
                 genres.forEach(g => {
@@ -423,13 +449,13 @@
                     chip.innerText = g.name;
                     chip.onclick = () => {
                         selectedGenre = g.slug;
+                        currentDiscoverPage = 1; // Reset về trang 1 khi đổi thể loại
                         loadDiscoverData();
                     };
                     genreContainer.appendChild(chip);
                 });
             } catch(e) { console.error(e); }
 
-            // Fetch phim theo quốc gia hoặc thể loại
             fetchFilteredMovies();
         }
 
@@ -437,9 +463,9 @@
             let grid = document.getElementById('discover-grid');
             grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:20px;">Đang tải...</div>';
             
-            let url = `https://phimapi.com/v1/api/quoc-gia/${selectedCountry}?limit=24`;
+            let url = `https://phimapi.com/v1/api/quoc-gia/${selectedCountry}?page=${currentDiscoverPage}`;
             if (selectedGenre) {
-                url = `https://phimapi.com/v1/api/the-loai/${selectedGenre}?limit=24`;
+                url = `https://phimapi.com/v1/api/the-loai/${selectedGenre}?page=${currentDiscoverPage}`;
             }
 
             try {
@@ -453,9 +479,20 @@
                     return;
                 }
                 items.forEach(movie => grid.appendChild(createMovieCard(movie)));
+
+                // Cập nhật trạng thái nút phân trang
+                document.getElementById('page-indicator').innerText = `Trang ${currentDiscoverPage}`;
+                document.getElementById('prev-page-btn').disabled = currentDiscoverPage <= 1;
             } catch (err) {
                 grid.innerHTML = '<div style="color:red; grid-column: 1/-1; text-align:center;">Lỗi tải dữ liệu.</div>';
             }
+        }
+
+        function changeDiscoverPage(direction) {
+            currentDiscoverPage += direction;
+            if (currentDiscoverPage < 1) currentDiscoverPage = 1;
+            fetchFilteredMovies();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // 3. Tìm kiếm phim
@@ -476,7 +513,7 @@
             grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:20px;">Đang tìm kiếm...</div>';
 
             try {
-                let res = await fetch(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&limit=20`);
+                let res = await fetch(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&limit=24`);
                 let json = await res.json();
                 let items = json.data?.items || json.items || [];
 
