@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC Tivi v2</title>
-    <!-- Thư viện phát video HLS cho stream m3u8 -->
+    <title>Kho Phim NguonC v3</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -82,10 +81,9 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v2</h1>
+    <h1>Kho Phim NguonC v3</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
-    <!-- Màn hình phát video -->
     <div id="player-container">
         <video id="video-player" controls autoplay></video>
         <button class="close-btn" onclick="closePlayer()">Đóng (Quay lại)</button>
@@ -101,12 +99,13 @@
                 let grid = document.getElementById('movie-grid');
                 grid.innerHTML = '';
 
-                if (!data.items || data.items.length === 0) {
+                let listItems = data.items || data.data?.items;
+                if (!listItems || listItems.length === 0) {
                     grid.innerHTML = 'Không có dữ liệu phim.';
                     return;
                 }
 
-                data.items.forEach((movie, index) => {
+                listItems.forEach((movie, index) => {
                     let card = document.createElement('div');
                     card.className = 'movie-card';
                     card.tabIndex = index + 1;
@@ -124,48 +123,36 @@
 
             } catch (error) {
                 console.error('Lỗi tải danh sách:', error);
-                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới danh sách phim.';
+                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới API danh sách phim.';
             }
-        }
-
-        // Hàm đệ quy tự động quét toàn bộ object JSON để tìm link video (.m3u8 hoặc .mp4)
-        function findVideoLink(obj) {
-            if (!obj || typeof obj !== 'object') return null;
-            for (let key in obj) {
-                if (typeof obj[key] === 'string' && (obj[key].includes('.m3u8') || obj[key].includes('.mp4'))) {
-                    return obj[key];
-                }
-                if (typeof obj[key] === 'object') {
-                    let found = findVideoLink(obj[key]);
-                    if (found) return found;
-                }
-            }
-            return null;
         }
 
         async function getMovieDetails(slug) {
             try {
-                // Dùng Proxy trung gian để ép vượt qua lỗi chặn CORS của trình duyệt/tivi
-                let proxyUrl = 'https://api.allorigins.win/get?url=';
-                let targetUrl = encodeURIComponent(`https://phim.nguonc.com/api/film/${slug}`);
+                // Gọi trực tiếp API chi tiết phim từ NguonC
+                let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
+                let data = await res.json();
                 
-                let res = await fetch(proxyUrl + targetUrl);
-                let wrapper = await res.json();
-                let data = JSON.parse(wrapper.contents);
-                
-                console.log("Dữ liệu chi tiết phim:", data);
+                console.log("Cấu trúc trả về:", data);
 
-                let playUrl = findVideoLink(data);
+                // Truy cập chuẩn xác đường dẫn chứa link tập phim đầu tiên
+                let movieObj = data.movie || data.data;
+                let episodes = movieObj?.episodes;
 
-                if (playUrl) {
-                    console.log("Đã tìm thấy link stream:", playUrl);
-                    playVideo(playUrl);
-                } else {
-                    alert('Phim này không tìm thấy link stream hợp lệ!');
+                if (episodes && episodes.length > 0) {
+                    let firstServerItems = episodes[0].items;
+                    if (firstServerItems && firstServerItems.length > 0) {
+                        let playUrl = firstServerItems[0].link;
+                        if (playUrl) {
+                            playVideo(playUrl);
+                            return;
+                        }
+                    }
                 }
+                alert('Phim này chưa có link phát video!');
             } catch (error) {
                 console.error(error);
-                alert('Không thể lấy chi tiết phim này!');
+                alert('Không thể lấy chi tiết phim này do lỗi mạng hoặc CORS!');
             }
         }
 
@@ -184,7 +171,7 @@
                     hls.loadSource(url);
                     hls.attachMedia(video);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        video.play().catch(e => console.log("Cần bấm play thủ công:", e));
+                        video.play().catch(e => console.log("Cần bấm play thủ công"));
                     });
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = url;
@@ -192,7 +179,7 @@
                 }
             } else {
                 video.src = url;
-                video.play().catch(e => console.log("Cần bấm play thủ công:", e));
+                video.play().catch(e => console.log("Cần bấm play thủ công"));
             }
         }
 
