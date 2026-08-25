@@ -94,7 +94,7 @@
             .movie-row { grid-template-columns: repeat(2, 1fr); }
         }
 
-        /* Movie Card (Tối ưu cho TV focus/hover) */
+        /* Movie Card */
         .movie-card {
             background-color: var(--card-bg);
             border-radius: 8px;
@@ -153,6 +153,41 @@
             border-color: var(--accent-color);
         }
 
+        /* Pagination Controls (Tối ưu cho TV remote) */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 25px;
+        }
+        .page-btn {
+            padding: 10px 24px;
+            background-color: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .page-btn:focus, .page-btn:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            outline: none;
+            transform: scale(1.05);
+        }
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .page-info {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
         /* Video Player Modal */
         #player-container {
             display: none;
@@ -193,7 +228,7 @@
 
     <!-- Main Dynamic Content Container -->
     <div class="main-container" id="main-content">
-        <!-- Lịch sử / Phim đang xem sẽ tự động hiện lên đầu nếu có -->
+        <!-- Lịch sử / Phim đang xem -->
         <div id="history-section" style="display: none;">
             <div class="section-header">
                 <div class="section-title">⭐ Tiếp tục xem (Lịch sử)</div>
@@ -201,22 +236,30 @@
             <div class="movie-row" id="history-row"></div>
         </div>
 
-        <!-- Bộ lọc Thể loại / Quốc gia -->
+        <!-- Bộ lọc Quốc gia -->
         <div class="section-header" style="margin-top: 10px;">
             <div class="section-title">Khám phá theo Quốc gia</div>
         </div>
         <div id="country-filters" class="filter-container"></div>
 
+        <!-- Bộ lọc Thể loại -->
         <div class="section-header">
             <div class="section-title">Khám phá theo Thể loại</div>
         </div>
         <div id="genre-filters" class="filter-container"></div>
 
-        <!-- Kết quả danh sách phim theo bộ lọc hoặc tìm kiếm -->
+        <!-- Danh sách kết quả -->
         <div class="section-header">
             <div class="section-title" id="results-title">Danh sách phim</div>
         </div>
         <div class="movie-row" id="results-row" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
+
+        <!-- Nút Phân trang (Trang trước / Trang sau) -->
+        <div class="pagination-container" id="pagination-controls">
+            <button class="page-btn" id="prev-btn" onclick="changePage(-1)">⬅ Trang trước</button>
+            <span class="page-info" id="page-info">Trang 1</span>
+            <button class="page-btn" id="next-btn" onclick="changePage(1)">Trang sau ➡</button>
+        </div>
     </div>
 
     <!-- Video Player Modal -->
@@ -226,9 +269,11 @@
     </div>
 
     <script>
-        const API_GENRES = 'https://phimapi.com/the-loai';
-        let selectedCountry = 'han-quoc';
-        let selectedGenre = '';
+        const API_GENRES = 'https://phimapi.com/v1/api/the-loai';
+        let currentFilterType = 'quoc-gia'; // 'quoc-gia' hoặc 'the-loai'
+        let currentFilterSlug = 'han-quoc';
+        let currentPage = 1;
+        let totalPages = 1;
 
         function getImageUrl(path) {
             if (!path) return '';
@@ -266,7 +311,7 @@
             return card;
         }
 
-        // --- QUẢN LÝ LỊCH SỬ XEM (HIỂN THỊ NGAY ĐẦU TRANG) ---
+        // --- LỊCH SỬ XEM ---
         function saveToHistory(movie) {
             if (!movie || !movie.slug) return;
             let history = JSON.parse(localStorage.getItem('stremio_history') || '[]');
@@ -292,7 +337,7 @@
             history.forEach(movie => historyRow.appendChild(createMovieCard(movie)));
         }
 
-        // --- KHỞI TẠO BỘ LỌC & DANH SÁCH ---
+        // --- KHỞI TẠO BỘ LỌC ---
         async function initApp() {
             renderHistorySection();
 
@@ -308,10 +353,12 @@
             countryContainer.innerHTML = '';
             countries.forEach(c => {
                 let chip = document.createElement('div');
-                chip.className = `chip ${selectedCountry === c.slug ? 'active' : ''}`;
+                chip.className = `chip ${currentFilterType === 'quoc-gia' && currentFilterSlug === c.slug ? 'active' : ''}`;
                 chip.innerText = c.name;
                 chip.onclick = () => {
-                    selectedCountry = c.slug;
+                    currentFilterType = 'quoc-gia';
+                    currentFilterSlug = c.slug;
+                    currentPage = 1;
                     fetchFilteredMovies();
                 };
                 countryContainer.appendChild(chip);
@@ -324,22 +371,15 @@
                 
                 let genreContainer = document.getElementById('genre-filters');
                 genreContainer.innerHTML = '';
-                
-                let allChip = document.createElement('div');
-                allChip.className = `chip ${!selectedGenre ? 'active' : ''}`;
-                allChip.innerText = 'Tất cả';
-                allChip.onclick = () => { 
-                    selectedGenre = ''; 
-                    fetchFilteredMovies(); 
-                };
-                genreContainer.appendChild(allChip);
 
                 genres.forEach(g => {
                     let chip = document.createElement('div');
-                    chip.className = `chip ${selectedGenre === g.slug ? 'active' : ''}`;
+                    chip.className = `chip ${currentFilterType === 'the-loai' && currentFilterSlug === g.slug ? 'active' : ''}`;
                     chip.innerText = g.name;
                     chip.onclick = () => {
-                        selectedGenre = g.slug;
+                        currentFilterType = 'the-loai';
+                        currentFilterSlug = g.slug;
+                        currentPage = 1;
                         fetchFilteredMovies();
                     };
                     genreContainer.appendChild(chip);
@@ -351,27 +391,52 @@
 
         async function fetchFilteredMovies() {
             let row = document.getElementById('results-row');
+            document.getElementById('results-title').innerText = "Danh sách phim";
             row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tải...</div>';
             
-            let url = `https://phimapi.com/v1/api/quoc-gia/${selectedCountry}?limit=24`;
-            if (selectedGenre) {
-                url = `https://phimapi.com/v1/api/the-loai/${selectedGenre}?limit=24`;
-            }
+            let url = `https://phimapi.com/v1/api/${currentFilterType}/${currentFilterSlug}?page=${currentPage}&limit=24`;
 
             try {
                 let res = await fetch(url);
                 let json = await res.json();
                 let items = json.data?.items || json.items || [];
                 
+                // Cập nhật tổng số trang từ API nếu có
+                if (json.data?.params?.pagination) {
+                    let totalItems = json.data.params.pagination.totalItems || 0;
+                    let limit = json.data.params.pagination.totalItemsPerPage || 24;
+                    totalPages = Math.ceil(totalItems / limit) || 1;
+                } else {
+                    totalPages = items.length === 24 ? currentPage + 1 : currentPage; // Fallback nhẹ nếu API không trả về phân trang chuẩn
+                }
+
                 row.innerHTML = '';
                 if (items.length === 0) {
                     row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Không tìm thấy phim phù hợp.</div>';
+                    document.getElementById('pagination-controls').style.display = 'none';
                     return;
                 }
+                
                 items.forEach(movie => row.appendChild(createMovieCard(movie)));
+                updatePaginationUI();
             } catch (err) {
                 row.innerHTML = '<div style="color:red; padding:20px;">Lỗi tải dữ liệu.</div>';
             }
+        }
+
+        function updatePaginationUI() {
+            let paginationContainer = document.getElementById('pagination-controls');
+            paginationContainer.style.display = 'flex';
+            document.getElementById('page-info').innerText = `Trang ${currentPage} / ${totalPages}`;
+            document.getElementById('prev-btn').disabled = (currentPage <= 1);
+            document.getElementById('next-btn').disabled = (currentPage >= totalPages);
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            if (currentPage < 1) currentPage = 1;
+            fetchFilteredMovies();
+            window.scrollTo({ top: 400, behavior: 'smooth' }); // Cuộn nhẹ lên vùng danh sách khi đổi trang
         }
 
         // --- TÌM KIẾM ---
@@ -385,6 +450,7 @@
         async function performSearch(keyword) {
             let row = document.getElementById('results-row');
             document.getElementById('results-title').innerText = `Kết quả tìm kiếm: "${keyword}"`;
+            document.getElementById('pagination-controls').style.display = 'none'; // Ẩn phân trang khi tìm kiếm
             row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tìm kiếm...</div>';
 
             try {
