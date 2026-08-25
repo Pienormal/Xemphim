@@ -144,12 +144,10 @@
             justify-content: center;
             cursor: pointer;
             z-index: 10;
-            transition: background 0.2s, transform 0.2s;
         }
         .remove-history-btn:hover {
             background: #ff4d4d;
             border-color: #ff4d4d;
-            transform: scale(1.1);
         }
 
         /* Filter Chips Bar */
@@ -330,7 +328,6 @@
             return card;
         }
 
-        // --- QUẢN LÝ LỊCH SỬ XEM ---
         function saveToHistory(movie) {
             if (!movie || !movie.slug) return;
             let history = JSON.parse(localStorage.getItem('stremio_history') || '[]');
@@ -363,63 +360,70 @@
             history.forEach(movie => historyRow.appendChild(createMovieCard(movie, true)));
         }
 
-        // --- KHỞI TẠO BỘ LỌC ---
         function initApp() {
-            renderHistorySection();
+            try {
+                renderHistorySection();
 
-            let countries = [
-                { name: 'Hàn Quốc', slug: 'han-quoc' },
-                { name: 'Trung Quốc', slug: 'trung-quoc' },
-                { name: 'Mỹ', slug: 'au-my' },
-                { name: 'Nhật Bản', slug: 'nhat-ban' },
-                { name: 'Thái Lan', slug: 'thai-lan' }
-            ];
+                let countries = [
+                    { name: 'Hàn Quốc', slug: 'han-quoc' },
+                    { name: 'Trung Quốc', slug: 'trung-quoc' },
+                    { name: 'Mỹ', slug: 'au-my' },
+                    { name: 'Nhật Bản', slug: 'nhat-ban' },
+                    { name: 'Thái Lan', slug: 'thai-lan' }
+                ];
 
-            let countryContainer = document.getElementById('country-filters');
-            countryContainer.innerHTML = '';
-            countries.forEach(c => {
-                let chip = document.createElement('div');
-                chip.className = `chip ${currentFilterType === 'quoc-gia' && currentFilterSlug === c.slug ? 'active' : ''}`;
-                chip.innerText = c.name;
-                chip.onclick = () => {
-                    currentFilterType = 'quoc-gia';
-                    currentFilterSlug = c.slug;
-                    currentPage = 1;
-                    highlightActiveChips();
-                    fetchFilteredMovies();
-                };
-                countryContainer.appendChild(chip);
-            });
+                let countryContainer = document.getElementById('country-filters');
+                if (countryContainer) {
+                    countryContainer.innerHTML = '';
+                    countries.forEach(c => {
+                        let chip = document.createElement('div');
+                        chip.className = `chip ${currentFilterType === 'quoc-gia' && currentFilterSlug === c.slug ? 'active' : ''}`;
+                        chip.innerText = c.name;
+                        chip.onclick = () => {
+                            currentFilterType = 'quoc-gia';
+                            currentFilterSlug = c.slug;
+                            currentPage = 1;
+                            highlightActiveChips();
+                            fetchFilteredMovies();
+                        };
+                        countryContainer.appendChild(chip);
+                    });
+                }
 
-            let genres = [
-                { name: 'Hành Động', slug: 'hanh-dong' },
-                { name: 'Tình Cảm', slug: 'tinh-cam' },
-                { name: 'Hài Hước', slug: 'hai-huoc' },
-                { name: 'Kinh Dị', slug: 'kinh-di' },
-                { name: 'Viễn Tưởng', slug: 'vien-tuong' },
-                { name: 'Hoạt Hình', slug: 'hoat-hinh' },
-                { name: 'Võ Thuật', slug: 'vo-thuat' },
-                { name: 'Tâm Lý', slug: 'tam-ly' }
-            ];
+                let genres = [
+                    { name: 'Hành Động', slug: 'hanh-dong' },
+                    { name: 'Tình Cảm', slug: 'tinh-cam' },
+                    { name: 'Hài Hước', slug: 'hai-huoc' },
+                    { name: 'Kinh Dị', slug: 'kinh-di' },
+                    { name: 'Viễn Tưởng', slug: 'vien-tuong' },
+                    { name: 'Hoạt Hình', slug: 'hoat-hinh' },
+                    { name: 'Võ Thuật', slug: 'vo-thuat' },
+                    { name: 'Tâm Lý', slug: 'tam-ly' }
+                ];
 
-            let genreContainer = document.getElementById('genre-filters');
-            genreContainer.innerHTML = '';
-            genres.forEach(g => {
-                let chip = document.createElement('div');
-                chip.className = `chip ${currentFilterType === 'the-loai' && currentFilterSlug === g.slug ? 'active' : ''}`;
-                chip.innerText = g.name;
-                chip.onclick = () => {
-                    currentFilterType = 'the-loai';
-                    currentFilterSlug = g.slug;
-                    currentPage = 1;
-                    highlightActiveChips();
-                    fetchFilteredMovies();
-                };
-                genreContainer.appendChild(chip);
-            });
+                let genreContainer = document.getElementById('genre-filters');
+                if (genreContainer) {
+                    genreContainer.innerHTML = '';
+                    genres.forEach(g => {
+                        let chip = document.createElement('div');
+                        chip.className = `chip ${currentFilterType === 'the-loai' && currentFilterSlug === g.slug ? 'active' : ''}`;
+                        chip.innerText = g.name;
+                        chip.onclick = () => {
+                            currentFilterType = 'the-loai';
+                            currentFilterSlug = g.slug;
+                            currentPage = 1;
+                            highlightActiveChips();
+                            fetchFilteredMovies();
+                        };
+                        genreContainer.appendChild(chip);
+                    });
+                }
 
-            highlightActiveChips();
-            fetchFilteredMovies();
+                highlightActiveChips();
+                fetchFilteredMovies();
+            } catch (e) {
+                console.error("Init Error: ", e);
+            }
         }
 
         function highlightActiveChips() {
@@ -445,12 +449,13 @@
         async function fetchFilteredMovies() {
             let row = document.getElementById('results-row');
             document.getElementById('results-title').innerText = "Danh sách phim";
-            row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tải...</div>';
+            row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tải dữ liệu từ máy chủ...</div>';
             
             let url = `https://phimapi.com/v1/api/${currentFilterType}/${currentFilterSlug}?page=${currentPage}`;
 
             try {
                 let res = await fetch(url);
+                if (!res.ok) throw new Error('Network response was not ok');
                 let json = await res.json();
                 
                 let items = json.data?.items || json.items || json.data || [];
@@ -474,7 +479,7 @@
                 items.forEach(movie => row.appendChild(createMovieCard(movie, false)));
                 updatePaginationUI();
             } catch (err) {
-                row.innerHTML = '<div style="color:red; padding:20px;">Lỗi tải dữ liệu.</div>';
+                row.innerHTML = `<div style="color:#ff4d4d; padding:20px;">Lỗi kết nối mạng hoặc TV chưa có internet!<br><small>${err.message}</small></div>`;
             }
         }
 
@@ -493,7 +498,6 @@
             window.scrollTo({ top: 400, behavior: 'smooth' });
         }
 
-        // --- TÌM KIẾM ---
         function handleSearchKey(event) {
             if (event.key === 'Enter') {
                 let keyword = document.getElementById('search-input').value.trim();
@@ -523,7 +527,6 @@
             }
         }
 
-        // --- CHI TIẾT & PHÁT VIDEO ---
         async function getMovieDetails(slug, movieData) {
             try {
                 let res = await fetch(`https://phimapi.com/phim/${slug}`);
@@ -596,14 +599,13 @@
 
             if (document.exitFullscreen) {
                 document.exitFullscreen().catch(err => {});
-            } else if (document.webkitExitFullscreen) {
+            } else if (document.webkitExitResponder) {
                 document.webkitExitFullscreen();
             }
 
             container.style.display = 'none';
         }
 
-        // Bắt sự kiện bấm nút Back / Esc trên TV hoặc bàn phím để đóng player
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape' || event.key === 'BrowserBack' || event.keyCode === 8) {
                 const container = document.getElementById('player-container');
@@ -614,8 +616,10 @@
             }
         });
 
-        // Khởi chạy khi mở trang
-        initApp();
+        // Đảm bảo chạy init sau khi DOM tải xong
+        window.onload = function() {
+            initApp();
+        };
     </script>
 </body>
 </html>
