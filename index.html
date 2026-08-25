@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC v4.6</title>
+    <title>Kho Phim OPhim v1.0</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,8 +81,8 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v4.6</h1>
-    <div id="movie-grid">Đang tải danh sách phim...</div>
+    <h1>Kho Phim OPhim</h1>
+    <div id="movie-grid">Đang tải danh sách phim từ OPhim...</div>
 
     <div id="player-container">
         <video id="video-player" controls autoplay></video>
@@ -90,7 +90,7 @@
     </div>
 
     <script>
-        const apiURL = 'https://phim.nguonc.com/api/films/phim-moi-cap-nhat?page=1';
+        const apiURL = 'https://ophim1.com/danh-sach/phim-moi-cap-nhat?page=1';
 
         async function fetchMovies() {
             try {
@@ -99,7 +99,7 @@
                 let grid = document.getElementById('movie-grid');
                 grid.innerHTML = '';
 
-                let listItems = data.items || data.data?.items;
+                let listItems = data.items;
                 if (!listItems || listItems.length === 0) {
                     grid.innerHTML = 'Không có dữ liệu phim.';
                     return;
@@ -110,8 +110,11 @@
                     card.className = 'movie-card';
                     card.tabIndex = index + 1;
                     
+                    // OPhim trả về định dạng ảnh thumbnail đầy đủ qua CDN riêng của họ hoặc poster_url
+                    let thumbURL = movie.thumb_url.startsWith('http') ? movie.thumb_url : `https://img.ophim.live/uploads/movies/${movie.thumb_url}`;
+
                     card.innerHTML = `
-                        <img src="${movie.thumb_url}" alt="${movie.name}">
+                        <img src="${thumbURL}" alt="${movie.name}">
                         <div class="movie-title">${movie.name}</div>
                     `;
 
@@ -123,57 +126,33 @@
 
             } catch (error) {
                 console.error('Lỗi tải danh sách:', error);
-                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới API danh sách phim.';
+                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới API OPhim.';
             }
-        }
-
-        // Hàm vét cạn tìm mọi khóa link/file/url hợp lệ trong JSON trả về
-        function smartFindLink(obj) {
-            if (!obj || typeof obj !== 'object') return null;
-            for (let key in obj) {
-                if ((key === 'link' || key === 'file' || key === 'url') && typeof obj[key] === 'string' && (obj[key].includes('http') || obj[key].includes('.m3u8'))) {
-                    return obj[key];
-                }
-                if (typeof obj[key] === 'object') {
-                    let found = smartFindLink(obj[key]);
-                    if (found) return found;
-                }
-            }
-            return null;
         }
 
         async function getMovieDetails(slug) {
             try {
-                // Gọi trực tiếp API chi tiết phim không qua proxy lằng nhằng
-                let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
+                let res = await fetch(`https://ophim1.com/phim/${slug}`);
                 let data = await res.json();
                 
-                console.log("Chi tiết phim:", data);
+                console.log("Chi tiết phim OPhim:", data);
 
-                let playUrl = null;
-                let movieData = data.movie || data.item || data;
-                let episodes = movieData?.episodes;
-
+                // Cấu trúc chuẩn của OPhim: data.episodes[0].server_data[0].link_m3u8
+                let episodes = data.episodes;
                 if (episodes && episodes.length > 0) {
-                    let serverList = episodes[0].items || episodes[0].server_data;
-                    if (serverList && serverList.length > 0) {
-                        playUrl = serverList[0].link || serverList[0].file;
+                    let serverData = episodes[0].server_data;
+                    if (serverData && serverData.length > 0) {
+                        let playUrl = serverData[0].link_m3u8;
+                        if (playUrl) {
+                            playVideo(playUrl);
+                            return;
+                        }
                     }
                 }
-
-                // Nếu cấu trúc tiêu chuẩn không bắt được, dùng hàm quét vét cạn thông minh
-                if (!playUrl) {
-                    playUrl = smartFindLink(data);
-                }
-
-                if (playUrl) {
-                    playVideo(playUrl);
-                } else {
-                    alert('Phim này chưa có link phát video!');
-                }
+                alert('Phim này chưa có link phát video!');
             } catch (error) {
                 console.error(error);
-                alert('Không thể lấy chi tiết phim do lỗi kết nối!');
+                alert('Không thể lấy chi tiết phim từ OPhim!');
             }
         }
 
@@ -198,7 +177,7 @@
                 }
             } else {
                 video.src = url;
-                    video.play().catch(e => console.log("Cần bấm play thủ công"));
+                video.play().catch(e => console.log("Cần bấm play thủ công"));
             }
         }
 
