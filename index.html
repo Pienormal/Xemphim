@@ -339,25 +339,26 @@
             if (btnElement) btnElement.classList.add('active');
         }
 
+        // Xử lý chuẩn hóa URL ảnh đồng bộ với cấu hình CDN chính của kho phim
         function getImageUrl(path) {
             if (!path) return '';
-            if (path.startsWith('http://') || path.startsWith('https://')) return path;
-            return `https://phimapi.com${path.startsWith('/') ? path : '/' + path}`;
+            if (path.startsWith('http://') || path.startsWith('https://')) {
+                // Sửa một số domain ảnh cũ hoặc bị chặn sang CDN ổn định của hệ thống
+                return path.replace('img.phimapi.com', 'phimimg.com').replace('phimapi.com/upload', 'phimimg.com/upload');
+            }
+            // Nếu đường dẫn là dạng tương đối, tự động nối với domain ảnh chính thức
+            return `https://phimimg.com/${path.startsWith('/') ? path.slice(1) : path}`;
         }
 
-        // Hàm thông minh tự động đổi nguồn ảnh dự phòng khi ảnh gốc lỗi
         function handleImageError(imgElement, slug, movieName) {
-            imgElement.onerror = null; // Chống lặp vô hạn
-            
-            // Nếu có slug, ưu tiên tìm ảnh poster dự phòng theo chuẩn cấu trúc tên miền ảnh phổ biến hoặc tự tạo placeholder đẹp
+            imgElement.onerror = null; 
             if (slug) {
+                // Fallback lần 1 sang domain dự phòng qua slug
                 imgElement.src = `https://img.phimapi.com/thumb/${slug}.jpg`;
-                // Nếu nguồn phụ vẫn lỗi, hiển thị khung SVG xám kèm tên phim rõ ràng
                 imgElement.onerror = function() {
+                    // Fallback lần cuối hiển thị khung tên phim chuẩn nếu toàn bộ CDN lỗi
                     this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="130" height="190" viewBox="0 0 130 190"><rect width="130" height="190" fill="%231a1a1a"/><text x="50%" y="50%" fill="%23aaa" font-size="11" font-family="Arial" text-anchor="middle" width="120"><tspan x="50%" dy="-10">${encodeURIComponent(movieName || 'No Image')}</tspan></text></svg>`;
                 };
-            } else {
-                imgElement.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="130" height="190" viewBox="0 0 130 190"><rect width="130" height="190" fill="%231a1a1a"/><text x="50%" y="50%" fill="%23666" font-size="12" font-family="Arial" text-anchor="middle" dy=".3em">No Image</text></svg>`;
             }
         }
 
@@ -365,7 +366,9 @@
             let card = document.createElement('div');
             card.className = 'movie-card';
             card.tabIndex = 0;
-            let rawImg = movie.thumb_url || movie.poster_url || '';
+            
+            // Lấy ưu tiên các trường ảnh poster từ API trả về
+            let rawImg = movie.poster_url || movie.thumb_url || '';
             let thumbURL = getImageUrl(rawImg);
             let slug = movie.slug || '';
             let movieName = movie.name || '';
