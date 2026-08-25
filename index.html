@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC v3</title>
+    <title>Kho Phim NguonC v4</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,7 +81,7 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v3</h1>
+    <h1>Kho Phim NguonC v4</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
     <div id="player-container">
@@ -129,14 +129,13 @@
 
         async function getMovieDetails(slug) {
             try {
-                // Gọi trực tiếp API chi tiết phim từ NguonC
                 let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
                 let data = await res.json();
                 
-                console.log("Cấu trúc trả về:", data);
+                console.log("Cấu trúc trả về từ NguonC:", data);
 
-                // Truy cập chuẩn xác đường dẫn chứa link tập phim đầu tiên
-                let movieObj = data.movie || data.data;
+                // Theo tài liệu NguonC, dữ liệu chi tiết nằm trong data.item hoặc data.movie
+                let movieObj = data.item || data.movie || data;
                 let episodes = movieObj?.episodes;
 
                 if (episodes && episodes.length > 0) {
