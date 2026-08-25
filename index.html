@@ -65,35 +65,6 @@
             display: block;
         }
 
-        /* Rows & Grid for Home Categories */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 20px 0 10px 0;
-        }
-        .section-title {
-            color: var(--text-main);
-            font-size: 17px;
-            font-weight: bold;
-        }
-        .movie-grid-row {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-        @media (max-width: 1200px) {
-            .movie-grid-row {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-        @media (max-width: 600px) {
-            .movie-grid-row {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
         /* Movie Card */
         .movie-card {
             background-color: var(--card-bg);
@@ -102,6 +73,7 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             border: 2px solid transparent;
+            position: relative;
         }
         .movie-card:focus, .movie-card:hover {
             transform: scale(1.05);
@@ -126,15 +98,12 @@
             color: #ddd;
         }
 
-        /* Grid for Discover/Search */
+        /* Grid for Discover/Search/History */
         .movie-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
             gap: 12px;
             margin-top: 10px;
-        }
-        .movie-grid .movie-card img {
-            height: 190px;
         }
 
         /* Pagination Style */
@@ -143,7 +112,7 @@
             justify-content: center;
             align-items: center;
             gap: 15px;
-            margin: 15px 0 25px 0;
+            margin: 20px 0 25px 0;
         }
         .pagination-btn {
             padding: 6px 14px;
@@ -265,19 +234,12 @@
     <!-- Header Search Bar -->
     <div class="header-container">
         <div class="search-box">
-            <input type="text" id="search-input" placeholder="You can search anything..." onkeypress="handleSearchKey(event)">
+            <input type="text" id="search-input" placeholder="Tìm kiếm phim, diễn viên..." onkeypress="handleSearchKey(event)">
         </div>
     </div>
 
-    <!-- TAB 1: HOME -->
-    <div id="view-home" class="view-section active">
-        <div id="home-content">
-            <div style="text-align: center; color: var(--text-muted); margin-top: 60px;">Đang tải trang chủ...</div>
-        </div>
-    </div>
-
-    <!-- TAB 2: DISCOVER -->
-    <div id="view-discover" class="view-section">
+    <!-- TAB 1: DISCOVER (Mặc định khi mở web) -->
+    <div id="view-discover" class="view-section active">
         <div class="section-title" style="margin-bottom: 8px;">Quốc gia</div>
         <div id="country-filters" class="filter-container"></div>
 
@@ -293,21 +255,27 @@
         </div>
     </div>
 
+    <!-- TAB 2: WATCHLIST / LỊCH SỬ ĐANG XEM -->
+    <div id="view-history" class="view-section">
+        <div class="section-title" style="margin-bottom: 12px;">Phim đang xem / Lịch sử</div>
+        <div id="history-grid" class="movie-grid"></div>
+    </div>
+
     <!-- TAB 3: SEARCH RESULTS VIEW -->
     <div id="view-search" class="view-section">
-        <div class="section-title" id="search-heading">Kết quả tìm kiếm</div>
+        <div class="section-title" id="search-heading" style="margin-bottom: 12px;">Kết quả tìm kiếm</div>
         <div id="search-grid" class="movie-grid"></div>
     </div>
 
     <!-- Bottom Navigation Bar -->
     <div class="bottom-nav">
-        <button class="nav-item active" onclick="switchTab('home', this)">
-            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            Home
-        </button>
-        <button class="nav-item" onclick="switchTab('discover', this)">
+        <button class="nav-item active" onclick="switchTab('discover', this)">
             <svg viewBox="0 0 24 24"><path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/></svg>
-            Discover
+            Khám phá
+        </button>
+        <button class="nav-item" onclick="switchTab('history', this)">
+            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.58 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            Đang xem
         </button>
     </div>
 
@@ -318,45 +286,42 @@
     </div>
 
     <script>
-        const API_HOME = 'https://phimapi.com/v1/api/home';
         const API_GENRES = 'https://phimapi.com/the-loai';
         
         let selectedCountry = 'han-quoc';
         let selectedGenre = '';
         let currentDiscoverPage = 1;
-        let homeCategories = {};
 
+        // Chuyển tab giao diện
         function switchTab(tabName, btnElement) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
-            if (tabName === 'home') {
-                document.getElementById('view-home').classList.add('active');
-            } else if (tabName === 'discover') {
+            if (tabName === 'discover') {
                 document.getElementById('view-discover').classList.add('active');
-                loadDiscoverData();
+            } else if (tabName === 'history') {
+                document.getElementById('view-history').classList.add('active');
+                renderHistoryMovies();
+            } else if (tabName === 'search') {
+                document.getElementById('view-search').classList.add('active');
             }
+
             if (btnElement) btnElement.classList.add('active');
         }
 
-        // Xử lý chuẩn hóa URL ảnh đồng bộ với cấu hình CDN chính của kho phim
         function getImageUrl(path) {
             if (!path) return '';
             if (path.startsWith('http://') || path.startsWith('https://')) {
-                // Sửa một số domain ảnh cũ hoặc bị chặn sang CDN ổn định của hệ thống
                 return path.replace('img.phimapi.com', 'phimimg.com').replace('phimapi.com/upload', 'phimimg.com/upload');
             }
-            // Nếu đường dẫn là dạng tương đối, tự động nối với domain ảnh chính thức
             return `https://phimimg.com/${path.startsWith('/') ? path.slice(1) : path}`;
         }
 
         function handleImageError(imgElement, slug, movieName) {
             imgElement.onerror = null; 
             if (slug) {
-                // Fallback lần 1 sang domain dự phòng qua slug
                 imgElement.src = `https://img.phimapi.com/thumb/${slug}.jpg`;
                 imgElement.onerror = function() {
-                    // Fallback lần cuối hiển thị khung tên phim chuẩn nếu toàn bộ CDN lỗi
                     this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="130" height="190" viewBox="0 0 130 190"><rect width="130" height="190" fill="%231a1a1a"/><text x="50%" y="50%" fill="%23aaa" font-size="11" font-family="Arial" text-anchor="middle" width="120"><tspan x="50%" dy="-10">${encodeURIComponent(movieName || 'No Image')}</tspan></text></svg>`;
                 };
             }
@@ -367,7 +332,6 @@
             card.className = 'movie-card';
             card.tabIndex = 0;
             
-            // Lấy ưu tiên các trường ảnh poster từ API trả về
             let rawImg = movie.poster_url || movie.thumb_url || '';
             let thumbURL = getImageUrl(rawImg);
             let slug = movie.slug || '';
@@ -377,92 +341,35 @@
                 <img src="${thumbURL}" alt="${movieName}" onerror="handleImageError(this, '${slug}', '${movieName.replace(/'/g, "\\'")}')">
                 <div class="movie-title">${movieName}</div>
             `;
-            card.onclick = () => getMovieDetails(slug);
+            card.onclick = () => getMovieDetails(slug, movie);
             return card;
         }
 
-        // 1. Load Trang Chủ
-        async function fetchHome() {
-            try {
-                let res = await fetch(API_HOME, { headers: { accept: 'application/json' } });
-                let json = await res.json();
-                let dataBlock = json.data || json;
-                
-                homeCategories = {
-                    "phimmoi": { title: "Phim Mới Cập Nhật", list: dataBlock.items || dataBlock.phimmoi || [], page: 1 },
-                    "phimle": { title: "Phim Lẻ Phổ Biến", list: dataBlock.phimle || [], page: 1 },
-                    "phimbo": { title: "Phim Bộ Phổ Biến", list: dataBlock.phimbo || [], page: 1 },
-                    "hoathinh": { title: "Hoạt Hình", list: dataBlock.hoathinh || [], page: 1 }
-                };
+        // --- LƯU VÀ HIỂN THỊ LỊCH SỬ PHIM ĐANG XEM ---
+        function saveToHistory(movie) {
+            if (!movie || !movie.slug) return;
+            let history = JSON.parse(localStorage.getItem('stremio_history') || '[]');
+            // Xóa phim cũ nếu đã có để đưa lên đầu danh sách
+            history = history.filter(item => item.slug !== movie.slug);
+            history.unshift(movie);
+            // Giới hạn lưu tối đa 20 phim gần nhất
+            if (history.length > 20) history.pop();
+            localStorage.setItem('stremio_history', JSON.stringify(history));
+        }
 
-                renderHomeRows();
-            } catch (err) {
-                console.error(err);
-                document.getElementById('home-content').innerHTML = '<div style="text-align:center; color:red; margin-top:40px;">Không thể tải dữ liệu trang chủ.</div>';
+        function renderHistoryMovies() {
+            let grid = document.getElementById('history-grid');
+            let history = JSON.parse(localStorage.getItem('stremio_history') || '[]');
+            
+            grid.innerHTML = '';
+            if (history.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:40px;">Chưa có phim nào đang xem dở. Hãy bấm xem một bộ phim bất kỳ nhé!</div>';
+                return;
             }
+            history.forEach(movie => grid.appendChild(createMovieCard(movie)));
         }
 
-        function renderHomeRows() {
-            let container = document.getElementById('home-content');
-            container.innerHTML = '';
-
-            for (let key in homeCategories) {
-                let cat = homeCategories[key];
-                if (!cat.list || cat.list.length === 0) continue;
-
-                let sectionDiv = document.createElement('div');
-                
-                let header = document.createElement('div');
-                header.className = 'section-header';
-                header.innerHTML = `<div class="section-title">${cat.title}</div>`;
-                sectionDiv.appendChild(header);
-
-                let gridRow = document.createElement('div');
-                gridRow.className = 'movie-grid-row';
-                gridRow.id = `grid-${key}`;
-                sectionDiv.appendChild(gridRow);
-
-                let totalPages = Math.ceil(cat.list.length / 8);
-                let pagination = document.createElement('div');
-                pagination.className = 'pagination-container';
-                pagination.innerHTML = `
-                    <button class="pagination-btn" ${cat.page <= 1 ? 'disabled' : ''} onclick="changeHomeSectionPage('${key}', -1)">Trang trước</button>
-                    <span class="page-indicator">Trang ${cat.page} / ${totalPages > 0 ? totalPages : 1}</span>
-                    <button class="pagination-btn" ${cat.page >= totalPages ? 'disabled' : ''} onclick="changeHomeSectionPage('${key}', 1)">Trang sau</button>
-                `;
-                sectionDiv.appendChild(pagination);
-
-                container.appendChild(sectionDiv);
-                updateHomeRowContent(key);
-            }
-        }
-
-        function updateHomeRowContent(key) {
-            let cat = homeCategories[key];
-            let gridRow = document.getElementById(`grid-${key}`);
-            if (!gridRow) return;
-
-            gridRow.innerHTML = '';
-            let start = (cat.page - 1) * 8;
-            let end = start + 8;
-            let sliceList = cat.list.slice(start, end);
-
-            sliceList.forEach(movie => {
-                gridRow.appendChild(createMovieCard(movie));
-            });
-        }
-
-        function changeHomeSectionPage(key, direction) {
-            let cat = homeCategories[key];
-            let totalPages = Math.ceil(cat.list.length / 8);
-            cat.page += direction;
-            if (cat.page < 1) cat.page = 1;
-            if (cat.page > totalPages) cat.page = totalPages;
-
-            renderHomeRows();
-        }
-
-        // 2. Load Discover
+        // --- LOAD DISCOVER (QUỐC GIA & THỂ LOẠI) ---
         async function loadDiscoverData() {
             let countries = [
                 { name: 'Hàn Quốc', slug: 'han-quoc' },
@@ -488,7 +395,9 @@
 
             try {
                 let res = await fetch(API_GENRES);
-                let genres = await res.json();
+                let json = await res.json();
+                let genres = Array.isArray(json) ? json : (json.data || json.items || []);
+                
                 let genreContainer = document.getElementById('genre-filters');
                 genreContainer.innerHTML = '';
                 
@@ -513,7 +422,7 @@
                     };
                     genreContainer.appendChild(chip);
                 });
-            } catch(e) { console.error(e); }
+            } catch(e) { console.error("Lỗi tải thể loại:", e); }
 
             fetchFilteredMovies();
         }
@@ -553,7 +462,7 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // 3. Tìm kiếm phim
+        // --- TÌM KIẾM PHIM ---
         function handleSearchKey(event) {
             if (event.key === 'Enter') {
                 let keyword = document.getElementById('search-input').value.trim();
@@ -562,10 +471,7 @@
         }
 
         async function performSearch(keyword) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.getElementById('view-search').classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
+            switchTab('search', null);
             let grid = document.getElementById('search-grid');
             document.getElementById('search-heading').innerText = `Kết quả tìm kiếm: "${keyword}"`;
             grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:20px;">Đang tìm kiếm...</div>';
@@ -586,11 +492,20 @@
             }
         }
 
-        // 4. Xem chi tiết & Phát video
-        async function getMovieDetails(slug) {
+        // --- XEM CHI TIẾT & PHÁT VIDEO ---
+        async function getMovieDetails(slug, movieData) {
             try {
                 let res = await fetch(`https://phimapi.com/phim/${slug}`);
                 let data = await res.json();
+                
+                // Nếu api chi tiết trả về đủ thông tin, tiến hành lưu lịch sử
+                let fullMovieInfo = {
+                    slug: slug,
+                    name: data.movie?.name || movieData.name,
+                    poster_url: data.movie?.poster_url || data.movie?.thumb_url || movieData.poster_url || movieData.thumb_url
+                };
+                saveToHistory(fullMovieInfo);
+
                 let episodes = data.episodes;
                 if (episodes && episodes.length > 0) {
                     let serverData = episodes[0].server_data;
@@ -640,8 +555,8 @@
             container.style.display = 'none';
         }
 
-        // Khởi chạy ban đầu
-        fetchHome();
+        // Khởi chạy giao diện Khám phá mặc định khi mở web
+        loadDiscoverData();
     </script>
 </body>
 </html>
