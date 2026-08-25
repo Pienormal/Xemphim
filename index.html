@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim KKPhim v5.2</title>
+    <title>Kho Phim KKPhim v5.3</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -57,6 +57,7 @@
             width: 100%;
             height: 220px;
             object-fit: cover;
+            background-color: #2a2a2a; /* Màu nền chờ khi ảnh đang tải */
         }
         .movie-title {
             padding: 10px;
@@ -97,10 +98,10 @@
 <body>
 
     <h1>Kho Phim KKPhim</h1>
-    <div class="subtitle">Trang chủ tổng hợp v1</div>
+    <div class="subtitle">Trang chủ chuẩn v1 (Fix lỗi hiển thị ảnh)</div>
     
     <div id="content-container">
-        <div style="text-align: center; color: #aaa; margin-top: 50px;">Đang tải kho phim chuẩn v1...</div>
+        <div style="text-align: center; color: #aaa; margin-top: 50px;">Đang tải danh sách phim và hình ảnh...</div>
     </div>
 
     <div id="player-container">
@@ -118,27 +119,33 @@
                 });
                 let json = await res.json();
                 
-                console.log("Dữ liệu trang chủ v1:", json);
-                
-                // Dữ liệu v1 trả về thường nằm trong json.data hoặc json
                 let dataBlock = json.data || json;
                 let container = document.getElementById('content-container');
                 container.innerHTML = '';
 
-                // Các khối thường có trong api/home: phimmoi (hoặc items), phimle, phimbo, hoathinh,...
-                // Tùy theo cấu trúc trả về, ta duyệt qua các nhóm để render ra giao diện
+                // Duyệt qua các danh mục chính trả về từ API home
                 renderSection(container, "Phim Mới Cập Nhật", dataBlock.items || dataBlock.phimmoi);
                 renderSection(container, "Phim Lẻ", dataBlock.phimle);
                 renderSection(container, "Phim Bộ", dataBlock.phimbo);
                 renderSection(container, "Hoạt Hình", dataBlock.hoathinh);
 
-                // Focus vào thẻ đầu tiên để hỗ trợ điều khiển bằng remote Tivi
                 document.querySelector('.movie-card')?.focus();
 
             } catch (error) {
-                console.error('Lỗi tải dữ liệu trang chủ:', error);
-                document.getElementById('content-container').innerHTML = '<div style="text-align: center; color: red;">Không thể kết nối tới KKPhim API v1.</div>';
+                console.error('Lỗi tải dữ liệu:', error);
+                document.getElementById('content-container').innerHTML = '<div style="text-align: center; color: red;">Không thể kết nối tới KKPhim API.</div>';
             }
+        }
+
+        function getImageUrl(path) {
+            if (!path) return '';
+            if (path.startsWith('http://') || path.startsWith('https://')) {
+                return path;
+            }
+            // Chuẩn CDN ảnh của hệ thống phim (thường dùng chung domain hoặc img.phimapi.com)
+            // Nếu path bắt đầu bằng / thì ghép trực tiếp, ngược lại thêm dấu /
+            let cleanPath = path.startsWith('/') ? path : '/' + path;
+            return `https://phimapi.com${cleanPath}`;
         }
 
         function renderSection(parentContainer, titleText, movieList) {
@@ -157,13 +164,12 @@
                 card.className = 'movie-card';
                 card.tabIndex = 0;
 
-                let thumbURL = movie.thumb_url || movie.poster_url;
-                if (thumbURL && !thumbURL.startsWith('http')) {
-                    thumbURL = `https://img.phimapi.com/${thumbURL}`;
-                }
+                // Lấy thumb_url hoặc poster_url và chuẩn hóa qua hàm xử lý ảnh
+                let rawImg = movie.thumb_url || movie.poster_url || '';
+                let thumbURL = getImageUrl(rawImg);
 
                 card.innerHTML = `
-                    <img src="${thumbURL}" alt="${movie.name}">
+                    <img src="${thumbURL}" alt="${movie.name}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Image'">
                     <div class="movie-title">${movie.name}</div>
                 `;
 
