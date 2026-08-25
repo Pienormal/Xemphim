@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim OPhim v1.0</title>
+    <title>Kho Phim KKPhim v5.2</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -16,8 +16,23 @@
         h1 {
             text-align: center;
             color: #ff9800;
+            margin-bottom: 5px;
         }
-        #movie-grid {
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .section-title {
+            color: #ff9800;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ff9800;
+            padding-left: 10px;
+            font-size: 18px;
+        }
+        .movie-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 15px;
@@ -45,7 +60,7 @@
         }
         .movie-title {
             padding: 10px;
-            font-size: 14px;
+            font-size: 13px;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
@@ -81,8 +96,12 @@
 </head>
 <body>
 
-    <h1>Kho Phim OPhim</h1>
-    <div id="movie-grid">Đang tải danh sách phim từ OPhim...</div>
+    <h1>Kho Phim KKPhim</h1>
+    <div class="subtitle">Trang chủ tổng hợp v1</div>
+    
+    <div id="content-container">
+        <div style="text-align: center; color: #aaa; margin-top: 50px;">Đang tải kho phim chuẩn v1...</div>
+    </div>
 
     <div id="player-container">
         <video id="video-player" controls autoplay></video>
@@ -90,54 +109,76 @@
     </div>
 
     <script>
-        const apiURL = 'https://ophim1.com/danh-sach/phim-moi-cap-nhat?page=1';
+        const homeAPI = 'https://phimapi.com/v1/api/home';
 
-        async function fetchMovies() {
+        async function fetchHomeData() {
             try {
-                let response = await fetch(apiURL);
-                let data = await response.json();
-                let grid = document.getElementById('movie-grid');
-                grid.innerHTML = '';
-
-                let listItems = data.items;
-                if (!listItems || listItems.length === 0) {
-                    grid.innerHTML = 'Không có dữ liệu phim.';
-                    return;
-                }
-
-                listItems.forEach((movie, index) => {
-                    let card = document.createElement('div');
-                    card.className = 'movie-card';
-                    card.tabIndex = index + 1;
-                    
-                    // OPhim trả về định dạng ảnh thumbnail đầy đủ qua CDN riêng của họ hoặc poster_url
-                    let thumbURL = movie.thumb_url.startsWith('http') ? movie.thumb_url : `https://img.ophim.live/uploads/movies/${movie.thumb_url}`;
-
-                    card.innerHTML = `
-                        <img src="${thumbURL}" alt="${movie.name}">
-                        <div class="movie-title">${movie.name}</div>
-                    `;
-
-                    card.onclick = () => getMovieDetails(movie.slug);
-                    grid.appendChild(card);
+                let res = await fetch(homeAPI, {
+                    headers: { accept: 'application/json' }
                 });
+                let json = await res.json();
+                
+                console.log("Dữ liệu trang chủ v1:", json);
+                
+                // Dữ liệu v1 trả về thường nằm trong json.data hoặc json
+                let dataBlock = json.data || json;
+                let container = document.getElementById('content-container');
+                container.innerHTML = '';
 
+                // Các khối thường có trong api/home: phimmoi (hoặc items), phimle, phimbo, hoathinh,...
+                // Tùy theo cấu trúc trả về, ta duyệt qua các nhóm để render ra giao diện
+                renderSection(container, "Phim Mới Cập Nhật", dataBlock.items || dataBlock.phimmoi);
+                renderSection(container, "Phim Lẻ", dataBlock.phimle);
+                renderSection(container, "Phim Bộ", dataBlock.phimbo);
+                renderSection(container, "Hoạt Hình", dataBlock.hoathinh);
+
+                // Focus vào thẻ đầu tiên để hỗ trợ điều khiển bằng remote Tivi
                 document.querySelector('.movie-card')?.focus();
 
             } catch (error) {
-                console.error('Lỗi tải danh sách:', error);
-                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới API OPhim.';
+                console.error('Lỗi tải dữ liệu trang chủ:', error);
+                document.getElementById('content-container').innerHTML = '<div style="text-align: center; color: red;">Không thể kết nối tới KKPhim API v1.</div>';
             }
+        }
+
+        function renderSection(parentContainer, titleText, movieList) {
+            if (!movieList || movieList.length === 0) return;
+
+            let title = document.createElement('div');
+            title.className = 'section-title';
+            title.innerText = titleText;
+            parentContainer.appendChild(title);
+
+            let grid = document.createElement('div');
+            grid.className = 'movie-grid';
+
+            movieList.forEach((movie, index) => {
+                let card = document.createElement('div');
+                card.className = 'movie-card';
+                card.tabIndex = 0;
+
+                let thumbURL = movie.thumb_url || movie.poster_url;
+                if (thumbURL && !thumbURL.startsWith('http')) {
+                    thumbURL = `https://img.phimapi.com/${thumbURL}`;
+                }
+
+                card.innerHTML = `
+                    <img src="${thumbURL}" alt="${movie.name}">
+                    <div class="movie-title">${movie.name}</div>
+                `;
+
+                card.onclick = () => getMovieDetails(movie.slug);
+                grid.appendChild(card);
+            });
+
+            parentContainer.appendChild(grid);
         }
 
         async function getMovieDetails(slug) {
             try {
-                let res = await fetch(`https://ophim1.com/phim/${slug}`);
+                let res = await fetch(`https://phimapi.com/phim/${slug}`);
                 let data = await res.json();
                 
-                console.log("Chi tiết phim OPhim:", data);
-
-                // Cấu trúc chuẩn của OPhim: data.episodes[0].server_data[0].link_m3u8
                 let episodes = data.episodes;
                 if (episodes && episodes.length > 0) {
                     let serverData = episodes[0].server_data;
@@ -152,7 +193,7 @@
                 alert('Phim này chưa có link phát video!');
             } catch (error) {
                 console.error(error);
-                alert('Không thể lấy chi tiết phim từ OPhim!');
+                alert('Không thể lấy chi tiết phim!');
             }
         }
 
@@ -190,7 +231,7 @@
             container.style.display = 'none';
         }
 
-        fetchMovies();
+        fetchHomeData();
     </script>
 </body>
 </html>
