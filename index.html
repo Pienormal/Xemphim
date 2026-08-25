@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Phim Tivi</title>
+    <title>Kho Phim NguonC Tivi</title>
     <!-- Thư viện phát video HLS cho stream m3u8 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
@@ -33,7 +33,6 @@
             transition: transform 0.2s, box-shadow 0.2s;
             border: 2px solid transparent;
         }
-        /* Hiệu ứng focus khi dùng remote tivi hoặc bàn phím */
         .movie-card:focus, .movie-card:hover {
             transform: scale(1.05);
             border-color: #ff9800;
@@ -77,6 +76,7 @@
             font-weight: bold;
             cursor: pointer;
             border-radius: 4px;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -101,42 +101,55 @@
                 let grid = document.getElementById('movie-grid');
                 grid.innerHTML = '';
 
-                // Duyệt danh sách phim từ API NguonC
+                if (!data.items || data.items.length === 0) {
+                    grid.innerHTML = 'Không có dữ liệu phim.';
+                    return;
+                }
+
                 data.items.forEach((movie, index) => {
                     let card = document.createElement('div');
                     card.className = 'movie-card';
-                    card.tabIndex = index + 1; // Giúp remote tivi focus vào được từng ô
+                    card.tabIndex = index + 1;
                     
                     card.innerHTML = `
                         <img src="${movie.thumb_url}" alt="${movie.name}">
                         <div class="movie-title">${movie.name}</div>
                     `;
 
-                    // Bấm vào phim để lấy chi tiết tập đầu tiên và phát
+                    // Bấm vào gọi hàm lấy chi tiết
                     card.onclick = () => getMovieDetails(movie.slug);
-                    
                     grid.appendChild(card);
                 });
 
-                // Focus vào phim đầu tiên mặc định
                 document.querySelector('.movie-card')?.focus();
 
             } catch (error) {
                 console.error('Lỗi tải API:', error);
-                document.getElementById('movie-grid').innerHTML = 'Không thể tải dữ liệu từ API phim.';
+                document.getElementById('movie-grid').innerHTML = 'Không thể kết nối tới API phim.';
             }
         }
 
         async function getMovieDetails(slug) {
             try {
                 let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
-                let detail = await res.json();
+                let data = await res.json();
                 
-                // Lấy link m3u8 của tập đầu tiên (hoặc tập mới nhất)
-                let firstEpisodeLink = detail.movie.episodes[0].items[0].link;
-                playVideo(firstEpisodeLink);
+                // Đọc đúng cấu trúc bọc dữ liệu của NguonC: data.movie.episodes
+                let movieData = data.movie || data;
+                let episodes = movieData.episodes;
+
+                if (episodes && episodes.length > 0) {
+                    let firstServerItems = episodes[0].items;
+                    if (firstServerItems && firstServerItems.length > 0) {
+                        let playUrl = firstServerItems[0].link;
+                        playVideo(playUrl);
+                        return;
+                    }
+                }
+                alert('Phim này chưa có link phát!');
             } catch (error) {
-                alert('Không thể lấy link phát phim này!');
+                console.error(error);
+                alert('Không thể lấy chi tiết phim này!');
             }
         }
 
@@ -145,16 +158,27 @@
             const video = document.getElementById('video-player');
             container.style.display = 'flex';
 
-            if (Hls.isSupported() && url.includes('.m3u8')) {
-                const hls = new Hls();
-                hls.loadSource(url);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+            console.log("Đang phát link:", url);
+
+            if (url.includes('.m3u8')) {
+                if (Hls.isSupported()) {
+                    if (window.hlsInstance) {
+                        window.hlsInstance.destroy(); // Hủy instance cũ nếu có
+                    }
+                    const hls = new Hls();
+                    window.hlsInstance = hls;
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        video.play().catch(e => console.log("Cần bấm play thủ công"));
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = url;
                     video.play();
-                });
+                }
             } else {
                 video.src = url;
-                video.play();
+                video.play().catch(e => console.log("Cần bấm play thủ công"));
             }
         }
 
@@ -163,6 +187,9 @@
             const video = document.getElementById('video-player');
             video.pause();
             video.src = '';
+            if (window.hlsInstance) {
+                window.hlsInstance.destroy();
+            }
             container.style.display = 'none';
         }
 
