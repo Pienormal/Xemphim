@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stremio Web</title>
+    <title>Stremio Web TV</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root {
@@ -19,12 +19,13 @@
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             margin: 0;
-            padding: 0 0 80px 0;
+            padding: 0 0 50px 0;
             -webkit-user-select: none;
         }
-        /* Search Bar Header */
+
+        /* Header Search Bar */
         .header-container {
-            padding: 20px 16px 10px 16px;
+            padding: 20px 24px 10px 24px;
             display: flex;
             justify-content: center;
             background: linear-gradient(to bottom, #000 0%, var(--bg-color) 100%);
@@ -56,30 +57,58 @@
             padding-left: 20px;
         }
 
-        /* Views Container */
-        .view-section {
-            display: none;
-            padding: 10px 16px;
-        }
-        .view-section.active {
-            display: block;
+        /* Main Content Container */
+        .main-container {
+            padding: 10px 24px;
         }
 
-        /* Movie Card */
+        /* Section Titles & Rows */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 24px 0 12px 0;
+        }
+        .section-title {
+            color: var(--text-main);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .movie-row {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            scrollbar-width: none;
+        }
+        .movie-row::-webkit-scrollbar { display: none; }
+
+        @media (max-width: 1400px) {
+            .movie-row { grid-template-columns: repeat(6, 1fr); }
+        }
+        @media (max-width: 1000px) {
+            .movie-row { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .movie-row { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        /* Movie Card (Tối ưu cho TV focus/hover) */
         .movie-card {
             background-color: var(--card-bg);
             border-radius: 8px;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
             border: 2px solid transparent;
-            position: relative;
+            flex: 0 0 auto;
         }
         .movie-card:focus, .movie-card:hover {
-            transform: scale(1.05);
+            transform: scale(1.06);
             border-color: var(--accent-color);
             outline: none;
-            box-shadow: 0 4px 20px rgba(123, 44, 191, 0.4);
+            box-shadow: 0 6px 25px rgba(123, 44, 191, 0.5);
         }
         .movie-card img {
             width: 100%;
@@ -98,48 +127,7 @@
             color: #ddd;
         }
 
-        /* Grid for Discover/Search/History */
-        .movie-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 12px;
-            margin-top: 10px;
-        }
-
-        /* Pagination Style */
-        .pagination-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin: 20px 0 25px 0;
-        }
-        .pagination-btn {
-            padding: 6px 14px;
-            background-color: var(--accent-color);
-            color: #fff;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 6px;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-        .pagination-btn:hover {
-            background-color: var(--accent-hover);
-        }
-        .pagination-btn:disabled {
-            background-color: #222;
-            color: #555;
-            cursor: not-allowed;
-        }
-        .page-indicator {
-            font-size: 13px;
-            color: var(--text-muted);
-            font-weight: bold;
-        }
-
-        /* Filter Chips */
+        /* Filter Chips Bar */
         .filter-container {
             display: flex;
             gap: 8px;
@@ -163,41 +151,6 @@
             background-color: var(--accent-color);
             color: #fff;
             border-color: var(--accent-color);
-        }
-
-        /* Bottom Navigation Bar */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 65px;
-            background-color: #121212;
-            border-top: 1px solid #222;
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 1000;
-        }
-        .nav-item {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 11px;
-            cursor: pointer;
-            gap: 4px;
-            transition: color 0.2s;
-        }
-        .nav-item svg {
-            width: 22px;
-            height: 22px;
-            fill: currentColor;
-        }
-        .nav-item.active {
-            color: var(--accent-color);
         }
 
         /* Video Player Modal */
@@ -238,45 +191,32 @@
         </div>
     </div>
 
-    <!-- TAB 1: DISCOVER (Mặc định khi mở web) -->
-    <div id="view-discover" class="view-section active">
-        <div class="section-title" style="margin-bottom: 8px;">Quốc gia</div>
+    <!-- Main Dynamic Content Container -->
+    <div class="main-container" id="main-content">
+        <!-- Lịch sử / Phim đang xem sẽ tự động hiện lên đầu nếu có -->
+        <div id="history-section" style="display: none;">
+            <div class="section-header">
+                <div class="section-title">⭐ Tiếp tục xem (Lịch sử)</div>
+            </div>
+            <div class="movie-row" id="history-row"></div>
+        </div>
+
+        <!-- Bộ lọc Thể loại / Quốc gia -->
+        <div class="section-header" style="margin-top: 10px;">
+            <div class="section-title">Khám phá theo Quốc gia</div>
+        </div>
         <div id="country-filters" class="filter-container"></div>
 
-        <div class="section-title" style="margin-bottom: 8px;">Thể loại</div>
+        <div class="section-header">
+            <div class="section-title">Khám phá theo Thể loại</div>
+        </div>
         <div id="genre-filters" class="filter-container"></div>
 
-        <div id="discover-grid" class="movie-grid"></div>
-
-        <div class="pagination-container">
-            <button class="pagination-btn" id="prev-page-btn" onclick="changeDiscoverPage(-1)">Trang trước</button>
-            <span class="page-indicator" id="page-indicator">Trang 1</span>
-            <button class="pagination-btn" id="next-page-btn" onclick="changeDiscoverPage(1)">Trang sau</button>
+        <!-- Kết quả danh sách phim theo bộ lọc hoặc tìm kiếm -->
+        <div class="section-header">
+            <div class="section-title" id="results-title">Danh sách phim</div>
         </div>
-    </div>
-
-    <!-- TAB 2: WATCHLIST / LỊCH SỬ ĐANG XEM -->
-    <div id="view-history" class="view-section">
-        <div class="section-title" style="margin-bottom: 12px;">Phim đang xem / Lịch sử</div>
-        <div id="history-grid" class="movie-grid"></div>
-    </div>
-
-    <!-- TAB 3: SEARCH RESULTS VIEW -->
-    <div id="view-search" class="view-section">
-        <div class="section-title" id="search-heading" style="margin-bottom: 12px;">Kết quả tìm kiếm</div>
-        <div id="search-grid" class="movie-grid"></div>
-    </div>
-
-    <!-- Bottom Navigation Bar -->
-    <div class="bottom-nav">
-        <button class="nav-item active" onclick="switchTab('discover', this)">
-            <svg viewBox="0 0 24 24"><path d="M12 10.9c-.61 0-1.1.49-1.1 1.1s.49 1.1 1.1 1.1c.61 0 1.1-.49 1.1-1.1s-.49-1.1-1.1-1.1zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm2.19 12.19L6 18l3.81-8.19L18 6l-3.81 8.19z"/></svg>
-            Khám phá
-        </button>
-        <button class="nav-item" onclick="switchTab('history', this)">
-            <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.58 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-            Đang xem
-        </button>
+        <div class="movie-row" id="results-row" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));"></div>
     </div>
 
     <!-- Video Player Modal -->
@@ -287,27 +227,8 @@
 
     <script>
         const API_GENRES = 'https://phimapi.com/the-loai';
-        
         let selectedCountry = 'han-quoc';
         let selectedGenre = '';
-        let currentDiscoverPage = 1;
-
-        // Chuyển tab giao diện
-        function switchTab(tabName, btnElement) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-
-            if (tabName === 'discover') {
-                document.getElementById('view-discover').classList.add('active');
-            } else if (tabName === 'history') {
-                document.getElementById('view-history').classList.add('active');
-                renderHistoryMovies();
-            } else if (tabName === 'search') {
-                document.getElementById('view-search').classList.add('active');
-            }
-
-            if (btnElement) btnElement.classList.add('active');
-        }
 
         function getImageUrl(path) {
             if (!path) return '';
@@ -345,32 +266,36 @@
             return card;
         }
 
-        // --- LƯU VÀ HIỂN THỊ LỊCH SỬ PHIM ĐANG XEM ---
+        // --- QUẢN LÝ LỊCH SỬ XEM (HIỂN THỊ NGAY ĐẦU TRANG) ---
         function saveToHistory(movie) {
             if (!movie || !movie.slug) return;
             let history = JSON.parse(localStorage.getItem('stremio_history') || '[]');
-            // Xóa phim cũ nếu đã có để đưa lên đầu danh sách
             history = history.filter(item => item.slug !== movie.slug);
             history.unshift(movie);
-            // Giới hạn lưu tối đa 20 phim gần nhất
-            if (history.length > 20) history.pop();
+            if (history.length > 15) history.pop();
             localStorage.setItem('stremio_history', JSON.stringify(history));
+            renderHistorySection();
         }
 
-        function renderHistoryMovies() {
-            let grid = document.getElementById('history-grid');
+        function renderHistorySection() {
+            let historySection = document.getElementById('history-section');
+            let historyRow = document.getElementById('history-row');
             let history = JSON.parse(localStorage.getItem('stremio_history') || '[]');
-            
-            grid.innerHTML = '';
+
             if (history.length === 0) {
-                grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:40px;">Chưa có phim nào đang xem dở. Hãy bấm xem một bộ phim bất kỳ nhé!</div>';
+                historySection.style.display = 'none';
                 return;
             }
-            history.forEach(movie => grid.appendChild(createMovieCard(movie)));
+
+            historySection.style.display = 'block';
+            historyRow.innerHTML = '';
+            history.forEach(movie => historyRow.appendChild(createMovieCard(movie)));
         }
 
-        // --- LOAD DISCOVER (QUỐC GIA & THỂ LOẠI) ---
-        async function loadDiscoverData() {
+        // --- KHỞI TẠO BỘ LỌC & DANH SÁCH ---
+        async function initApp() {
+            renderHistorySection();
+
             let countries = [
                 { name: 'Hàn Quốc', slug: 'han-quoc' },
                 { name: 'Trung Quốc', slug: 'trung-quoc' },
@@ -387,8 +312,7 @@
                 chip.innerText = c.name;
                 chip.onclick = () => {
                     selectedCountry = c.slug;
-                    currentDiscoverPage = 1;
-                    loadDiscoverData();
+                    fetchFilteredMovies();
                 };
                 countryContainer.appendChild(chip);
             });
@@ -406,8 +330,7 @@
                 allChip.innerText = 'Tất cả';
                 allChip.onclick = () => { 
                     selectedGenre = ''; 
-                    currentDiscoverPage = 1;
-                    loadDiscoverData(); 
+                    fetchFilteredMovies(); 
                 };
                 genreContainer.appendChild(allChip);
 
@@ -417,8 +340,7 @@
                     chip.innerText = g.name;
                     chip.onclick = () => {
                         selectedGenre = g.slug;
-                        currentDiscoverPage = 1;
-                        loadDiscoverData();
+                        fetchFilteredMovies();
                     };
                     genreContainer.appendChild(chip);
                 });
@@ -428,12 +350,12 @@
         }
 
         async function fetchFilteredMovies() {
-            let grid = document.getElementById('discover-grid');
-            grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:20px;">Đang tải...</div>';
+            let row = document.getElementById('results-row');
+            row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tải...</div>';
             
-            let url = `https://phimapi.com/v1/api/quoc-gia/${selectedCountry}?page=${currentDiscoverPage}`;
+            let url = `https://phimapi.com/v1/api/quoc-gia/${selectedCountry}?limit=24`;
             if (selectedGenre) {
-                url = `https://phimapi.com/v1/api/the-loai/${selectedGenre}?page=${currentDiscoverPage}`;
+                url = `https://phimapi.com/v1/api/the-loai/${selectedGenre}?limit=24`;
             }
 
             try {
@@ -441,28 +363,18 @@
                 let json = await res.json();
                 let items = json.data?.items || json.items || [];
                 
-                grid.innerHTML = '';
+                row.innerHTML = '';
                 if (items.length === 0) {
-                    grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center;">Không tìm thấy phim phù hợp.</div>';
+                    row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Không tìm thấy phim phù hợp.</div>';
                     return;
                 }
-                items.forEach(movie => grid.appendChild(createMovieCard(movie)));
-
-                document.getElementById('page-indicator').innerText = `Trang ${currentDiscoverPage}`;
-                document.getElementById('prev-page-btn').disabled = currentDiscoverPage <= 1;
+                items.forEach(movie => row.appendChild(createMovieCard(movie)));
             } catch (err) {
-                grid.innerHTML = '<div style="color:red; grid-column: 1/-1; text-align:center;">Lỗi tải dữ liệu.</div>';
+                row.innerHTML = '<div style="color:red; padding:20px;">Lỗi tải dữ liệu.</div>';
             }
         }
 
-        function changeDiscoverPage(direction) {
-            currentDiscoverPage += direction;
-            if (currentDiscoverPage < 1) currentDiscoverPage = 1;
-            fetchFilteredMovies();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // --- TÌM KIẾM PHIM ---
+        // --- TÌM KIẾM ---
         function handleSearchKey(event) {
             if (event.key === 'Enter') {
                 let keyword = document.getElementById('search-input').value.trim();
@@ -471,34 +383,32 @@
         }
 
         async function performSearch(keyword) {
-            switchTab('search', null);
-            let grid = document.getElementById('search-grid');
-            document.getElementById('search-heading').innerText = `Kết quả tìm kiếm: "${keyword}"`;
-            grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:20px;">Đang tìm kiếm...</div>';
+            let row = document.getElementById('results-row');
+            document.getElementById('results-title').innerText = `Kết quả tìm kiếm: "${keyword}"`;
+            row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Đang tìm kiếm...</div>';
 
             try {
                 let res = await fetch(`https://phimapi.com/v1/api/tim-kiem?keyword=${encodeURIComponent(keyword)}&limit=24`);
                 let json = await res.json();
                 let items = json.data?.items || json.items || [];
 
-                grid.innerHTML = '';
+                row.innerHTML = '';
                 if (items.length === 0) {
-                    grid.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center;">Không tìm thấy bộ phim nào.</div>';
+                    row.innerHTML = '<div style="color:var(--text-muted); padding:20px;">Không tìm thấy bộ phim nào.</div>';
                     return;
                 }
-                items.forEach(movie => grid.appendChild(createMovieCard(movie)));
+                items.forEach(movie => row.appendChild(createMovieCard(movie)));
             } catch (err) {
-                grid.innerHTML = '<div style="color:red; grid-column: 1/-1; text-align:center;">Lỗi kết nối tìm kiếm.</div>';
+                row.innerHTML = '<div style="color:red; padding:20px;">Lỗi kết nối tìm kiếm.</div>';
             }
         }
 
-        // --- XEM CHI TIẾT & PHÁT VIDEO ---
+        // --- CHI TIẾT & PHÁT VIDEO ---
         async function getMovieDetails(slug, movieData) {
             try {
                 let res = await fetch(`https://phimapi.com/phim/${slug}`);
                 let data = await res.json();
                 
-                // Nếu api chi tiết trả về đủ thông tin, tiến hành lưu lịch sử
                 let fullMovieInfo = {
                     slug: slug,
                     name: data.movie?.name || movieData.name,
@@ -555,8 +465,8 @@
             container.style.display = 'none';
         }
 
-        // Khởi chạy giao diện Khám phá mặc định khi mở web
-        loadDiscoverData();
+        // Khởi chạy khi mở trang
+        initApp();
     </script>
 </body>
 </html>
