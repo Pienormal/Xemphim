@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim KKPhim v5.3</title>
+    <title>Kho Phim KKPhim v5.4</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -46,6 +46,8 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
         }
         .movie-card:focus, .movie-card:hover {
             transform: scale(1.05);
@@ -57,7 +59,7 @@
             width: 100%;
             height: 220px;
             object-fit: cover;
-            background-color: #2a2a2a; /* Màu nền chờ khi ảnh đang tải */
+            background-color: #2a2a2a;
         }
         .movie-title {
             padding: 10px;
@@ -66,6 +68,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            background-color: #1e1e1e;
         }
         #player-container {
             display: none;
@@ -98,10 +101,10 @@
 <body>
 
     <h1>Kho Phim KKPhim</h1>
-    <div class="subtitle">Trang chủ chuẩn v1 (Fix lỗi hiển thị ảnh)</div>
+    <div class="subtitle">Trang chủ chuẩn v1 (Tự động fix ảnh lỗi)</div>
     
     <div id="content-container">
-        <div style="text-align: center; color: #aaa; margin-top: 50px;">Đang tải danh sách phim và hình ảnh...</div>
+        <div style="text-align: center; color: #aaa; margin-top: 50px;">Đang tải danh sách phim...</div>
     </div>
 
     <div id="player-container">
@@ -123,7 +126,6 @@
                 let container = document.getElementById('content-container');
                 container.innerHTML = '';
 
-                // Duyệt qua các danh mục chính trả về từ API home
                 renderSection(container, "Phim Mới Cập Nhật", dataBlock.items || dataBlock.phimmoi);
                 renderSection(container, "Phim Lẻ", dataBlock.phimle);
                 renderSection(container, "Phim Bộ", dataBlock.phimbo);
@@ -142,8 +144,6 @@
             if (path.startsWith('http://') || path.startsWith('https://')) {
                 return path;
             }
-            // Chuẩn CDN ảnh của hệ thống phim (thường dùng chung domain hoặc img.phimapi.com)
-            // Nếu path bắt đầu bằng / thì ghép trực tiếp, ngược lại thêm dấu /
             let cleanPath = path.startsWith('/') ? path : '/' + path;
             return `https://phimapi.com${cleanPath}`;
         }
@@ -164,12 +164,12 @@
                 card.className = 'movie-card';
                 card.tabIndex = 0;
 
-                // Lấy thumb_url hoặc poster_url và chuẩn hóa qua hàm xử lý ảnh
                 let rawImg = movie.thumb_url || movie.poster_url || '';
                 let thumbURL = getImageUrl(rawImg);
 
+                // Nếu ảnh tải lỗi (onerror), tự động đổi sang một ảnh placeholder xám có chữ tên phim hoặc icon
                 card.innerHTML = `
-                    <img src="${thumbURL}" alt="${movie.name}" onerror="this.src='https://via.placeholder.com/150x220?text=No+Image'">
+                    <img src="${thumbURL}" alt="${movie.name}" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'150\' height=\'220\' viewBox=\'0 0 150 220\'><rect width=\'150\' height=\'220\' fill=\'%23222\'/><text x=\'50%\' y=\'50%\' fill=\'%23888\' font-size=\'14\' font-family=\'Arial\' text-anchor=\'middle\' dy=\'.3em\'>Không có ảnh</text></svg>';">
                     <div class="movie-title">${movie.name}</div>
                 `;
 
