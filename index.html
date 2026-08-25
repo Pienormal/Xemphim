@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC v4.2</title>
+    <title>Kho Phim NguonC v4.3</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,7 +81,7 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v4.2</h1>
+    <h1>Kho Phim NguonC v4.3</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
     <div id="player-container">
@@ -127,28 +127,49 @@
             }
         }
 
+        // Hàm quét vét cạn mọi ngóc ngách tìm trường chứa link video hoặc m3u8
+        function smartFindLink(obj) {
+            if (!obj || typeof obj !== 'object') return null;
+            for (let key in obj) {
+                if ((key === 'link' || key === 'file' || key === 'url') && typeof obj[key] === 'string' && (obj[key].includes('http') || obj[key].includes('.m3u8'))) {
+                    return obj[key];
+                }
+                if (typeof obj[key] === 'object') {
+                    let found = smartFindLink(obj[key]);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
         async function getMovieDetails(slug) {
             try {
                 let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
                 let data = await res.json();
                 
-                // Trỏ thẳng vào đúng cấu trúc `data.movie.episodes` chuẩn xác 100%
-                let episodes = data.movie?.episodes || data.item?.episodes;
+                console.log("Chi tiết phim:", data);
 
-                if (episodes && episodes.length > 0) {
-                    let firstServerItems = episodes[0].items;
-                    if (firstServerItems && firstServerItems.length > 0) {
-                        let playUrl = firstServerItems[0].link;
-                        if (playUrl) {
-                            playVideo(playUrl);
-                            return;
-                        }
-                    }
+                // Thử bóc theo chuẩn thông thường trước
+                let playUrl = null;
+                let episodes = data.movie?.episodes || data.item?.episodes;
+                
+                if (episodes && episodes.length > 0 && episodes[0].items && episodes[0].items.length > 0) {
+                    playUrl = episodes[0].items[0].link;
                 }
-                alert('Phim này chưa có link phát video!');
+
+                // Nếu chuẩn thông thường không có, dùng hàm vét cạn quét toàn bộ dữ liệu
+                if (!playUrl) {
+                    playUrl = smartFindLink(data);
+                }
+
+                if (playUrl) {
+                    playVideo(playUrl);
+                } else {
+                    alert('Phim này chưa có link phát video!');
+                }
             } catch (error) {
                 console.error(error);
-                alert('Không thể lấy chi tiết phim này do lỗi mạng hoặc CORS!');
+                alert('Không thể lấy chi tiết phim này!');
             }
         }
 
@@ -159,9 +180,7 @@
 
             if (url.includes('.m3u8')) {
                 if (Hls.isSupported()) {
-                    if (window.hlsInstance) {
-                        window.hlsInstance.destroy();
-                    }
+                    if (window.hlsInstance) window.hlsInstance.destroy();
                     const hls = new Hls();
                     window.hlsInstance = hls;
                     hls.loadSource(url);
@@ -184,9 +203,7 @@
             const video = document.getElementById('video-player');
             video.pause();
             video.src = '';
-            if (window.hlsInstance) {
-                window.hlsInstance.destroy();
-            }
+            if (window.hlsInstance) window.hlsInstance.destroy();
             container.style.display = 'none';
         }
 
