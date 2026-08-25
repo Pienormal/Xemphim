@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Phim Tivi</title>
+    <!-- Thư viện phát video HLS cho stream m3u8 -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #ff9800;
+        }
+        #movie-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .movie-card {
+            background-color: #1e1e1e;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+        /* Hiệu ứng focus khi dùng remote tivi hoặc bàn phím */
+        .movie-card:focus, .movie-card:hover {
+            transform: scale(1.05);
+            border-color: #ff9800;
+            outline: none;
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.6);
+        }
+        .movie-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+        }
+        .movie-title {
+            padding: 10px;
+            font-size: 14px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #player-container {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        video {
+            width: 80%;
+            height: 80%;
+            background: #000;
+        }
+        .close-btn {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #ff9800;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Kho Phim NguonC</h1>
+    <div id="movie-grid">Đang tải danh sách phim...</div>
+
+    <!-- Màn hình phát video -->
+    <div id="player-container">
+        <video id="video-player" controls autoplay></video>
+        <button class="close-btn" onclick="closePlayer()">Đóng (Quay lại)</button>
+    </div>
+
+    <script>
+        const apiURL = 'https://phim.nguonc.com/api/films/phim-moi-cap-nhat?page=1';
+
+        async function fetchMovies() {
+            try {
+                let response = await fetch(apiURL);
+                let data = await response.json();
+                let grid = document.getElementById('movie-grid');
+                grid.innerHTML = '';
+
+                // Duyệt danh sách phim từ API NguonC
+                data.items.forEach((movie, index) => {
+                    let card = document.createElement('div');
+                    card.className = 'movie-card';
+                    card.tabIndex = index + 1; // Giúp remote tivi focus vào được từng ô
+                    
+                    card.innerHTML = `
+                        <img src="${movie.thumb_url}" alt="${movie.name}">
+                        <div class="movie-title">${movie.name}</div>
+                    `;
+
+                    // Bấm vào phim để lấy chi tiết tập đầu tiên và phát
+                    card.onclick = () => getMovieDetails(movie.slug);
+                    
+                    grid.appendChild(card);
+                });
+
+                // Focus vào phim đầu tiên mặc định
+                document.querySelector('.movie-card')?.focus();
+
+            } catch (error) {
+                console.error('Lỗi tải API:', error);
+                document.getElementById('movie-grid').innerHTML = 'Không thể tải dữ liệu từ API phim.';
+            }
+        }
+
+        async function getMovieDetails(slug) {
+            try {
+                let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
+                let detail = await res.json();
+                
+                // Lấy link m3u8 của tập đầu tiên (hoặc tập mới nhất)
+                let firstEpisodeLink = detail.movie.episodes[0].items[0].link;
+                playVideo(firstEpisodeLink);
+            } catch (error) {
+                alert('Không thể lấy link phát phim này!');
+            }
+        }
+
+        function playVideo(url) {
+            const container = document.getElementById('player-container');
+            const video = document.getElementById('video-player');
+            container.style.display = 'flex';
+
+            if (Hls.isSupported() && url.includes('.m3u8')) {
+                const hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play();
+                });
+            } else {
+                video.src = url;
+                video.play();
+            }
+        }
+
+        function closePlayer() {
+            const container = document.getElementById('player-container');
+            const video = document.getElementById('video-player');
+            video.pause();
+            video.src = '';
+            container.style.display = 'none';
+        }
+
+        fetchMovies();
+    </script>
+</body>
+</html>
