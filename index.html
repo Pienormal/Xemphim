@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC v4.4</title>
+    <title>Kho Phim NguonC v4.6</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,7 +81,7 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v4.4</h1>
+    <h1>Kho Phim NguonC v4.6</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
     <div id="player-container">
@@ -127,6 +127,7 @@
             }
         }
 
+        // Hàm vét cạn tìm mọi khóa link/file/url hợp lệ trong JSON trả về
         function smartFindLink(obj) {
             if (!obj || typeof obj !== 'object') return null;
             for (let key in obj) {
@@ -143,23 +144,24 @@
 
         async function getMovieDetails(slug) {
             try {
-                // Sử dụng Proxy trung gian để ép vượt qua lỗi chặn CORS của NguonC
-                let proxyUrl = 'https://api.allorigins.win/get?url=';
-                let targetUrl = encodeURIComponent(`https://phim.nguonc.com/api/film/${slug}`);
+                // Gọi trực tiếp API chi tiết phim không qua proxy lằng nhằng
+                let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
+                let data = await res.json();
                 
-                let res = await fetch(proxyUrl + targetUrl);
-                let wrapper = await res.json();
-                let data = JSON.parse(wrapper.contents);
-                
-                console.log("Chi tiết phim qua Proxy:", data);
+                console.log("Chi tiết phim:", data);
 
                 let playUrl = null;
-                let episodes = data.movie?.episodes || data.item?.episodes;
-                
-                if (episodes && episodes.length > 0 && episodes[0].items && episodes[0].items.length > 0) {
-                    playUrl = episodes[0].items[0].link;
+                let movieData = data.movie || data.item || data;
+                let episodes = movieData?.episodes;
+
+                if (episodes && episodes.length > 0) {
+                    let serverList = episodes[0].items || episodes[0].server_data;
+                    if (serverList && serverList.length > 0) {
+                        playUrl = serverList[0].link || serverList[0].file;
+                    }
                 }
 
+                // Nếu cấu trúc tiêu chuẩn không bắt được, dùng hàm quét vét cạn thông minh
                 if (!playUrl) {
                     playUrl = smartFindLink(data);
                 }
@@ -196,7 +198,7 @@
                 }
             } else {
                 video.src = url;
-                video.play().catch(e => console.log("Cần bấm play thủ công"));
+                    video.play().catch(e => console.log("Cần bấm play thủ công"));
             }
         }
 
