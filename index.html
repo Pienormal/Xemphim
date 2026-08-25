@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kho Phim NguonC v4.3</title>
+    <title>Kho Phim NguonC v4.4</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -81,7 +81,7 @@
 </head>
 <body>
 
-    <h1>Kho Phim NguonC v4.3</h1>
+    <h1>Kho Phim NguonC v4.4</h1>
     <div id="movie-grid">Đang tải danh sách phim...</div>
 
     <div id="player-container">
@@ -127,7 +127,6 @@
             }
         }
 
-        // Hàm quét vét cạn mọi ngóc ngách tìm trường chứa link video hoặc m3u8
         function smartFindLink(obj) {
             if (!obj || typeof obj !== 'object') return null;
             for (let key in obj) {
@@ -144,12 +143,16 @@
 
         async function getMovieDetails(slug) {
             try {
-                let res = await fetch(`https://phim.nguonc.com/api/film/${slug}`);
-                let data = await res.json();
+                // Sử dụng Proxy trung gian để ép vượt qua lỗi chặn CORS của NguonC
+                let proxyUrl = 'https://api.allorigins.win/get?url=';
+                let targetUrl = encodeURIComponent(`https://phim.nguonc.com/api/film/${slug}`);
                 
-                console.log("Chi tiết phim:", data);
+                let res = await fetch(proxyUrl + targetUrl);
+                let wrapper = await res.json();
+                let data = JSON.parse(wrapper.contents);
+                
+                console.log("Chi tiết phim qua Proxy:", data);
 
-                // Thử bóc theo chuẩn thông thường trước
                 let playUrl = null;
                 let episodes = data.movie?.episodes || data.item?.episodes;
                 
@@ -157,7 +160,6 @@
                     playUrl = episodes[0].items[0].link;
                 }
 
-                // Nếu chuẩn thông thường không có, dùng hàm vét cạn quét toàn bộ dữ liệu
                 if (!playUrl) {
                     playUrl = smartFindLink(data);
                 }
@@ -169,7 +171,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                alert('Không thể lấy chi tiết phim này!');
+                alert('Không thể lấy chi tiết phim do lỗi kết nối!');
             }
         }
 
