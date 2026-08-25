@@ -39,7 +39,7 @@
         }
         .search-box input {
             width: 100%;
-            padding: 12px 20px; /* Bỏ padding trái cho icon kính lúp */
+            padding: 12px 20px;
             background-color: #1a1a1a;
             border: 1px solid #333;
             border-radius: 30px;
@@ -65,7 +65,7 @@
             display: block;
         }
 
-        /* Rows & Horizontal Scroll (Giới hạn hiển thị để vừa khít 8 phim) */
+        /* Rows & Grid for Home Categories */
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -77,20 +77,25 @@
             font-size: 17px;
             font-weight: bold;
         }
-        .movie-row {
-            display: flex;
+        .movie-grid-row {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
             gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 10px;
-            scrollbar-width: none;
+            margin-bottom: 10px;
         }
-        .movie-row::-webkit-scrollbar {
-            display: none;
+        @media (max-width: 1200px) {
+            .movie-grid-row {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        @media (max-width: 600px) {
+            .movie-grid-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         /* Movie Card */
         .movie-card {
-            flex: 0 0 130px;
             background-color: var(--card-bg);
             border-radius: 8px;
             overflow: hidden;
@@ -105,7 +110,7 @@
             box-shadow: 0 4px 20px rgba(123, 44, 191, 0.4);
         }
         .movie-card img {
-            width: 130px;
+            width: 100%;
             height: 190px;
             object-fit: cover;
             background-color: #222;
@@ -128,12 +133,7 @@
             gap: 12px;
             margin-top: 10px;
         }
-        .movie-grid .movie-card {
-            flex: unset;
-            width: 100%;
-        }
         .movie-grid .movie-card img {
-            width: 100%;
             height: 190px;
         }
 
@@ -143,17 +143,17 @@
             justify-content: center;
             align-items: center;
             gap: 15px;
-            margin: 25px 0 15px 0;
+            margin: 15px 0 25px 0;
         }
         .pagination-btn {
-            padding: 8px 18px;
+            padding: 6px 14px;
             background-color: var(--accent-color);
             color: #fff;
             border: none;
             font-weight: bold;
             cursor: pointer;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             transition: background 0.2s;
         }
         .pagination-btn:hover {
@@ -165,7 +165,7 @@
             cursor: not-allowed;
         }
         .page-indicator {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-muted);
             font-weight: bold;
         }
@@ -196,7 +196,7 @@
             border-color: var(--accent-color);
         }
 
-        /* Bottom Navigation Bar (Chỉ còn 2 nút gọn gàng) */
+        /* Bottom Navigation Bar */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -262,7 +262,7 @@
 </head>
 <body>
 
-    <!-- Header Search Bar (Bỏ icon kính lúp) -->
+    <!-- Header Search Bar -->
     <div class="header-container">
         <div class="search-box">
             <input type="text" id="search-input" placeholder="You can search anything..." onkeypress="handleSearchKey(event)">
@@ -276,7 +276,7 @@
         </div>
     </div>
 
-    <!-- TAB 2: DISCOVER (Quốc gia & Thể loại + Phân trang) -->
+    <!-- TAB 2: DISCOVER -->
     <div id="view-discover" class="view-section">
         <div class="section-title" style="margin-bottom: 8px;">Quốc gia</div>
         <div id="country-filters" class="filter-container"></div>
@@ -286,7 +286,6 @@
 
         <div id="discover-grid" class="movie-grid"></div>
 
-        <!-- Nút phân trang cho phần Khám phá -->
         <div class="pagination-container">
             <button class="pagination-btn" id="prev-page-btn" onclick="changeDiscoverPage(-1)">Trang trước</button>
             <span class="page-indicator" id="page-indicator">Trang 1</span>
@@ -300,7 +299,7 @@
         <div id="search-grid" class="movie-grid"></div>
     </div>
 
-    <!-- Bottom Navigation Bar (Đã bỏ Setting) -->
+    <!-- Bottom Navigation Bar -->
     <div class="bottom-nav">
         <button class="nav-item active" onclick="switchTab('home', this)">
             <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -325,8 +324,8 @@
         let selectedCountry = 'han-quoc';
         let selectedGenre = '';
         let currentDiscoverPage = 1;
+        let homeCategories = {};
 
-        // Chuyển tab giao diện
         function switchTab(tabName, btnElement) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -340,70 +339,127 @@
             if (btnElement) btnElement.classList.add('active');
         }
 
-        // Xử lý ảnh
         function getImageUrl(path) {
             if (!path) return '';
             if (path.startsWith('http://') || path.startsWith('https://')) return path;
             return `https://phimapi.com${path.startsWith('/') ? path : '/' + path}`;
         }
 
-        // Tạo thẻ card phim
+        // Hàm thông minh tự động đổi nguồn ảnh dự phòng khi ảnh gốc lỗi
+        function handleImageError(imgElement, slug, movieName) {
+            imgElement.onerror = null; // Chống lặp vô hạn
+            
+            // Nếu có slug, ưu tiên tìm ảnh poster dự phòng theo chuẩn cấu trúc tên miền ảnh phổ biến hoặc tự tạo placeholder đẹp
+            if (slug) {
+                imgElement.src = `https://img.phimapi.com/thumb/${slug}.jpg`;
+                // Nếu nguồn phụ vẫn lỗi, hiển thị khung SVG xám kèm tên phim rõ ràng
+                imgElement.onerror = function() {
+                    this.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="130" height="190" viewBox="0 0 130 190"><rect width="130" height="190" fill="%231a1a1a"/><text x="50%" y="50%" fill="%23aaa" font-size="11" font-family="Arial" text-anchor="middle" width="120"><tspan x="50%" dy="-10">${encodeURIComponent(movieName || 'No Image')}</tspan></text></svg>`;
+                };
+            } else {
+                imgElement.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="130" height="190" viewBox="0 0 130 190"><rect width="130" height="190" fill="%231a1a1a"/><text x="50%" y="50%" fill="%23666" font-size="12" font-family="Arial" text-anchor="middle" dy=".3em">No Image</text></svg>`;
+            }
+        }
+
         function createMovieCard(movie) {
             let card = document.createElement('div');
             card.className = 'movie-card';
             card.tabIndex = 0;
             let rawImg = movie.thumb_url || movie.poster_url || '';
             let thumbURL = getImageUrl(rawImg);
+            let slug = movie.slug || '';
+            let movieName = movie.name || '';
 
             card.innerHTML = `
-                <img src="${thumbURL}" alt="${movie.name}" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'130\' height=\'190\' viewBox=\'0 0 130 190\'><rect width=\'130\' height=\'190\' fill=\'%231a1a1a\'/><text x=\'50%\' y=\'50%\' fill=\'%23666\' font-size=\'12\' font-family=\'Arial\' text-anchor=\'middle\' dy=\'.3em\'>No Image</text></svg>';">
-                <div class="movie-title">${movie.name}</div>
+                <img src="${thumbURL}" alt="${movieName}" onerror="handleImageError(this, '${slug}', '${movieName.replace(/'/g, "\\'")}')">
+                <div class="movie-title">${movieName}</div>
             `;
-            card.onclick = () => getMovieDetails(movie.slug);
+            card.onclick = () => getMovieDetails(slug);
             return card;
         }
 
-        // 1. Load Trang Chủ (Giới hạn mỗi hàng tối đa 8 phim)
+        // 1. Load Trang Chủ
         async function fetchHome() {
             try {
                 let res = await fetch(API_HOME, { headers: { accept: 'application/json' } });
                 let json = await res.json();
                 let dataBlock = json.data || json;
-                let container = document.getElementById('home-content');
-                container.innerHTML = '';
+                
+                homeCategories = {
+                    "phimmoi": { title: "Phim Mới Cập Nhật", list: dataBlock.items || dataBlock.phimmoi || [], page: 1 },
+                    "phimle": { title: "Phim Lẻ Phổ Biến", list: dataBlock.phimle || [], page: 1 },
+                    "phimbo": { title: "Phim Bộ Phổ Biến", list: dataBlock.phimbo || [], page: 1 },
+                    "hoathinh": { title: "Hoạt Hình", list: dataBlock.hoathinh || [], page: 1 }
+                };
 
-                renderHorizontalRow(container, "Phim Mới Cập Nhật", dataBlock.items || dataBlock.phimmoi);
-                renderHorizontalRow(container, "Phim Lẻ Phổ Biến", dataBlock.phimle);
-                renderHorizontalRow(container, "Phim Bộ Phổ Biến", dataBlock.phimbo);
-                renderHorizontalRow(container, "Hoạt Hình", dataBlock.hoathinh);
-
+                renderHomeRows();
             } catch (err) {
                 console.error(err);
                 document.getElementById('home-content').innerHTML = '<div style="text-align:center; color:red; margin-top:40px;">Không thể tải dữ liệu trang chủ.</div>';
             }
         }
 
-        function renderHorizontalRow(container, titleText, movieList) {
-            if (!movieList || movieList.length === 0) return;
+        function renderHomeRows() {
+            let container = document.getElementById('home-content');
+            container.innerHTML = '';
 
-            let header = document.createElement('div');
-            header.className = 'section-header';
-            header.innerHTML = `<div class="section-title">${titleText}</div>`;
-            container.appendChild(header);
+            for (let key in homeCategories) {
+                let cat = homeCategories[key];
+                if (!cat.list || cat.list.length === 0) continue;
 
-            let row = document.createElement('div');
-            row.className = 'movie-row';
+                let sectionDiv = document.createElement('div');
+                
+                let header = document.createElement('div');
+                header.className = 'section-header';
+                header.innerHTML = `<div class="section-title">${cat.title}</div>`;
+                sectionDiv.appendChild(header);
 
-            // Cắt danh sách chỉ lấy tối đa 8 phim cho mỗi hàng
-            let limitedList = movieList.slice(0, 8);
-            limitedList.forEach(movie => {
-                row.appendChild(createMovieCard(movie));
-            });
+                let gridRow = document.createElement('div');
+                gridRow.className = 'movie-grid-row';
+                gridRow.id = `grid-${key}`;
+                sectionDiv.appendChild(gridRow);
 
-            container.appendChild(row);
+                let totalPages = Math.ceil(cat.list.length / 8);
+                let pagination = document.createElement('div');
+                pagination.className = 'pagination-container';
+                pagination.innerHTML = `
+                    <button class="pagination-btn" ${cat.page <= 1 ? 'disabled' : ''} onclick="changeHomeSectionPage('${key}', -1)">Trang trước</button>
+                    <span class="page-indicator">Trang ${cat.page} / ${totalPages > 0 ? totalPages : 1}</span>
+                    <button class="pagination-btn" ${cat.page >= totalPages ? 'disabled' : ''} onclick="changeHomeSectionPage('${key}', 1)">Trang sau</button>
+                `;
+                sectionDiv.appendChild(pagination);
+
+                container.appendChild(sectionDiv);
+                updateHomeRowContent(key);
+            }
         }
 
-        // 2. Load Discover (Quốc gia & Thể loại có phân trang)
+        function updateHomeRowContent(key) {
+            let cat = homeCategories[key];
+            let gridRow = document.getElementById(`grid-${key}`);
+            if (!gridRow) return;
+
+            gridRow.innerHTML = '';
+            let start = (cat.page - 1) * 8;
+            let end = start + 8;
+            let sliceList = cat.list.slice(start, end);
+
+            sliceList.forEach(movie => {
+                gridRow.appendChild(createMovieCard(movie));
+            });
+        }
+
+        function changeHomeSectionPage(key, direction) {
+            let cat = homeCategories[key];
+            let totalPages = Math.ceil(cat.list.length / 8);
+            cat.page += direction;
+            if (cat.page < 1) cat.page = 1;
+            if (cat.page > totalPages) cat.page = totalPages;
+
+            renderHomeRows();
+        }
+
+        // 2. Load Discover
         async function loadDiscoverData() {
             let countries = [
                 { name: 'Hàn Quốc', slug: 'han-quoc' },
@@ -421,7 +477,7 @@
                 chip.innerText = c.name;
                 chip.onclick = () => {
                     selectedCountry = c.slug;
-                    currentDiscoverPage = 1; // Reset về trang 1 khi đổi quốc gia
+                    currentDiscoverPage = 1;
                     loadDiscoverData();
                 };
                 countryContainer.appendChild(chip);
@@ -449,7 +505,7 @@
                     chip.innerText = g.name;
                     chip.onclick = () => {
                         selectedGenre = g.slug;
-                        currentDiscoverPage = 1; // Reset về trang 1 khi đổi thể loại
+                        currentDiscoverPage = 1;
                         loadDiscoverData();
                     };
                     genreContainer.appendChild(chip);
@@ -480,7 +536,6 @@
                 }
                 items.forEach(movie => grid.appendChild(createMovieCard(movie)));
 
-                // Cập nhật trạng thái nút phân trang
                 document.getElementById('page-indicator').innerText = `Trang ${currentDiscoverPage}`;
                 document.getElementById('prev-page-btn').disabled = currentDiscoverPage <= 1;
             } catch (err) {
