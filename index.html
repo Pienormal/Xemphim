@@ -230,23 +230,6 @@
             background: #000;
             object-fit: contain;
         }
-        .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            padding: 10px 20px;
-            background: rgba(123, 44, 191, 0.8);
-            color: #fff;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 6px;
-            font-size: 15px;
-            z-index: 2010;
-        }
-        .close-btn:hover {
-            background: var(--accent-color);
-        }
     </style>
 </head>
 <body>
@@ -297,7 +280,6 @@
     <!-- Video Player Modal -->
     <div id="player-container">
         <video id="video-player" controls autoplay playsinline></video>
-        <button class="close-btn" onclick="closePlayer()">Đóng phát</button>
     </div>
 
     <script>
@@ -576,7 +558,6 @@
             const video = document.getElementById('video-player');
             container.style.display = 'flex';
 
-            // Kích hoạt chế độ phóng to toàn màn hình hệ thống chuẩn TV/Trình duyệt nếu có thể
             if (container.requestFullscreen) {
                 container.requestFullscreen().catch(err => {});
             } else if (container.webkitRequestFullscreen) {
@@ -606,14 +587,13 @@
             const video = document.getElementById('video-player');
             video.pause();
             video.removeAttribute('src');
-            video.load(); // Xóa sạch bộ đệm RAM trên thiết bị yếu
+            video.load(); 
             
             if (window.hlsInstance) {
                 window.hlsInstance.destroy();
                 window.hlsInstance = null;
             }
 
-            // Thoát chế độ toàn màn hình khi đóng player
             if (document.exitFullscreen) {
                 document.exitFullscreen().catch(err => {});
             } else if (document.webkitExitFullscreen) {
@@ -622,6 +602,17 @@
 
             container.style.display = 'none';
         }
+
+        // Bắt sự kiện bấm nút Back / Esc trên TV hoặc bàn phím để đóng player
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' || event.key === 'BrowserBack' || event.keyCode === 8) {
+                const container = document.getElementById('player-container');
+                if (container.style.display === 'flex') {
+                    closePlayer();
+                    event.preventDefault();
+                }
+            }
+        });
 
         // Khởi chạy khi mở trang
         initApp();
